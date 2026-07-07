@@ -1,0 +1,491 @@
+// Prisma Schema for AI HR Employee Platform
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS (using String for compatibility)
+// ============================================
+
+// Role: ADMIN, HR, MANAGER, EMPLOYEE
+// CandidateStatus: APPLIED, SCREENING, SHORTLISTED, INTERVIEW, EVALUATED, OFFERED, HIRED, REJECTED
+// InterviewStatus: SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+// OfferStatus: DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+// OnboardingStatus: PENDING, IN_PROGRESS, COMPLETED
+// TrainingStatus: ASSIGNED, IN_PROGRESS, COMPLETED, OVERDUE
+// PayrollStatus: DRAFT, PROCESSED, PAID, FAILED
+// LeaveStatus: PENDING, APPROVED, REJECTED, CANCELLED
+// LeaveType: CASUAL, SICK, ANNUAL, MATERNITY, PATERNITY, UNPAID
+// PromotionStatus: PROPOSED, APPROVED, REJECTED, IMPLEMENTED
+// ExitStatus: INITIATED, IN_PROGRESS, COMPLETED
+// WorkflowStatus: PENDING, RUNNING, COMPLETED, FAILED
+// EmployeeStatus: ACTIVE, ON_LEAVE, TERMINATED, RESIGNED
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          String   @default("EMPLOYEE") // ADMIN, HR, MANAGER, EMPLOYEE
+  avatar        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee?
+  notifications Notification[]
+}
+
+// ============================================
+// EMPLOYEE
+// ============================================
+
+model Employee {
+  id              String   @id @default(cuid())
+  employeeId      String   @unique // e.g., EMP-001
+  userId          String   @unique
+  name            String
+  email           String
+  companyEmail    String?  @unique
+  phone           String?
+  department      String
+  position        String
+  managerId       String?
+  status          String   @default("ACTIVE") // ACTIVE, ON_LEAVE, TERMINATED, RESIGNED
+  joinDate        DateTime @default(now())
+  salary          Float    @default(0)
+  address         String?
+  dateOfBirth     DateTime?
+  emergencyContact String?
+  profileImage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id])
+  manager           Employee?          @relation("ManagerToEmployee", fields: [managerId], references: [id])
+  directReports     Employee[]         @relation("ManagerToEmployee")
+  trainings         TrainingAssignment[]
+  payrolls          Payroll[]
+  leaves            Leave[]
+  performanceReviews PerformanceReview[]
+  promotions        Promotion[]
+  engagementFeedback EngagementFeedback[]
+  recognitions      Recognition[]
+  exitProcess       ExitProcess?
+  onboarding        Onboarding?
+
+  @@index([department])
+  @@index([status])
+  @@index([managerId])
+}
+
+// ============================================
+// RECRUITMENT
+// ============================================
+
+model JobOpening {
+  id            String   @id @default(cuid())
+  title         String
+  department    String
+  description   String
+  requirements  String
+  location      String   @default("Remote")
+  type          String   @default("Full-time") // Full-time, Part-time, Contract
+  salaryMin     Float?
+  salaryMax     Float?
+  openings      Int      @default(1)
+  status        String   @default("OPEN") // OPEN, CLOSED, ON_HOLD
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  candidates    Candidate[]
+
+  @@index([status])
+  @@index([department])
+}
+
+model Candidate {
+  id            String   @id @default(cuid())
+  name          String
+  email         String
+  phone         String?
+  resumeUrl     String?
+  coverLetter   String?
+  experience    Int      @default(0) // years
+  skills        String?  // comma-separated
+  status        String   @default("APPLIED") // APPLIED, SCREENING, SHORTLISTED, INTERVIEW, EVALUATED, OFFERED, HIRED, REJECTED
+  source        String?  // LinkedIn, Website, Referral
+  jobOpeningId  String?
+  aiScreenScore Float?   // AI screening score 0-100
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  jobOpening    JobOpening?  @relation(fields: [jobOpeningId], references: [id])
+  interviews    Interview[]
+  evaluation    Evaluation?
+  offer         Offer?
+
+  @@index([status])
+  @@index([jobOpeningId])
+}
+
+// ============================================
+// INTERVIEWS
+// ============================================
+
+model Interview {
+  id            String   @id @default(cuid())
+  candidateId   String
+  scheduledAt   DateTime
+  duration      Int      @default(60) // minutes
+  type          String   @default("Technical") // Technical, HR, Cultural, Final
+  location      String?  // Room or Video link
+  panelMembers  String   // comma-separated names
+  status        String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  feedback      String?
+  rating        Float?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id])
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([candidateId])
+}
+
+// ============================================
+// EVALUATIONS
+// ============================================
+
+model Evaluation {
+  id               String   @id @default(cuid())
+  candidateId      String   @unique
+  technicalScore   Float    @default(0) // 0-10
+  hrScore          Float    @default(0) // 0-10
+  communicationScore Float  @default(0) // 0-10
+  culturalFitScore Float    @default(0) // 0-10
+  overallScore     Float    @default(0) // computed
+  recommendation   String   @default("PENDING") // STRONG_HIRE, HIRE, MAYBE, NO_HIRE, PENDING
+  aiSummary        String?
+  evaluatorNotes   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  candidate        Candidate @relation(fields: [candidateId], references: [id])
+}
+
+// ============================================
+// OFFERS
+// ============================================
+
+model Offer {
+  id            String   @id @default(cuid())
+  candidateId   String   @unique
+  salary        Float
+  joiningDate   DateTime
+  department    String
+  position      String
+  benefits      String?
+  offerLetterUrl String?
+  status        String   @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+  expiresAt     DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id])
+
+  @@index([status])
+}
+
+// ============================================
+// ONBOARDING
+// ============================================
+
+model Onboarding {
+  id            String   @id @default(cuid())
+  employeeId    String   @unique
+  status        String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  steps         String   @default("[]") // JSON array of step objects
+  welcomeLetter String?
+  checklist     String?  // JSON array
+  orientationSchedule String? // JSON
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ============================================
+// TRAINING
+// ============================================
+
+model Training {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String   @default("General") // General, Technical, Compliance, Leadership
+  mandatory     Boolean  @default(false)
+  duration      Int      @default(0) // hours
+  provider      String?
+  contentUrl    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignments   TrainingAssignment[]
+}
+
+model TrainingAssignment {
+  id            String   @id @default(cuid())
+  employeeId    String
+  trainingId    String
+  status        String   @default("ASSIGNED") // ASSIGNED, IN_PROGRESS, COMPLETED, OVERDUE
+  progress      Int      @default(0) // 0-100
+  startedAt     DateTime?
+  completedAt   DateTime?
+  certificateUrl String?
+  score         Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  training      Training @relation(fields: [trainingId], references: [id])
+
+  @@unique([employeeId, trainingId])
+  @@index([status])
+}
+
+// ============================================
+// PAYROLL
+// ============================================
+
+model Payroll {
+  id            String   @id @default(cuid())
+  employeeId    String
+  month         Int      // 1-12
+  year          Int
+  baseSalary    Float
+  allowances    Float    @default(0)
+  deductions    Float    @default(0)
+  tax           Float    @default(0)
+  bonuses       Float    @default(0)
+  netPay        Float
+  status        String   @default("DRAFT") // DRAFT, PROCESSED, PAID, FAILED
+  paidAt        DateTime?
+  payslipUrl    String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+  @@index([status])
+  @@index([month, year])
+}
+
+// ============================================
+// LEAVE MANAGEMENT
+// ============================================
+
+model Leave {
+  id            String   @id @default(cuid())
+  employeeId    String
+  type          String   // CASUAL, SICK, ANNUAL, MATERNITY, PATERNITY, UNPAID
+  startDate     DateTime
+  endDate       DateTime
+  days          Int
+  reason        String
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  approvedBy    String?
+  approvedAt    DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([status])
+  @@index([employeeId])
+  @@index([startDate, endDate])
+}
+
+// ============================================
+// PERFORMANCE REVIEWS
+// ============================================
+
+model PerformanceReview {
+  id            String   @id @default(cuid())
+  employeeId    String
+  quarter       Int      // 1-4
+  year          Int
+  rating        Float    @default(0) // 1-5
+  feedback      String?
+  goals         String?  // JSON array
+  achievements  String?  // JSON array
+  areasOfImprovement String?
+  aiSuggestions String?
+  reviewedBy    String?
+  status        String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, quarter, year])
+  @@index([status])
+}
+
+// ============================================
+// PROMOTIONS
+// ============================================
+
+model Promotion {
+  id              String   @id @default(cuid())
+  employeeId      String
+  fromPosition    String
+  toPosition      String
+  fromSalary      Float
+  toSalary        Float
+  salaryRevision  Float    @default(0) // percentage
+  reason          String?
+  status          String   @default("PROPOSED") // PROPOSED, APPROVED, REJECTED, IMPLEMENTED
+  approvedBy      String?
+  effectiveDate   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employee        Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([status])
+  @@index([employeeId])
+}
+
+// ============================================
+// EMPLOYEE ENGAGEMENT
+// ============================================
+
+model EngagementSurvey {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  questions     String   @default("[]") // JSON array
+  status        String   @default("DRAFT") // DRAFT, ACTIVE, CLOSED
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  feedback      EngagementFeedback[]
+}
+
+model EngagementFeedback {
+  id            String   @id @default(cuid())
+  employeeId    String
+  surveyId      String
+  responses     String   @default("{}") // JSON
+  rating        Float    @default(0) // 1-5
+  comments      String?
+  anonymous     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  employee      Employee          @relation(fields: [employeeId], references: [id])
+  survey        EngagementSurvey  @relation(fields: [surveyId], references: [id])
+
+  @@unique([employeeId, surveyId])
+}
+
+model Recognition {
+  id            String   @id @default(cuid())
+  employeeId    String
+  awardedBy     String
+  title         String
+  description   String?
+  category      String   @default("General") // General, Innovation, Teamwork, Leadership, Customer
+  points        Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+// ============================================
+// EXIT PROCESS
+// ============================================
+
+model ExitProcess {
+  id               String   @id @default(cuid())
+  employeeId       String   @unique
+  resignationDate  DateTime
+  lastWorkingDate  DateTime
+  reason           String
+  exitInterviewDone Boolean  @default(false)
+  exitInterviewNotes String?
+  assetReturn      String   @default("{}") // JSON checklist
+  clearanceStatus  String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  settlementAmount Float?
+  settlementStatus String   @default("PENDING") // PENDING, PROCESSED, PAID
+  status           String   @default("INITIATED") // INITIATED, IN_PROGRESS, COMPLETED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  employee         Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  message       String
+  type          String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR, WORKFLOW
+  read          Boolean  @default(false)
+  link          String?
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// ============================================
+// WORKFLOW LOGS
+// ============================================
+
+model WorkflowLog {
+  id            String   @id @default(cuid())
+  workflowType  String   // ONBOARDING, OFFBOARDING, PROMOTION, PAYROLL, CUSTOM
+  input         String   // Original input/trigger
+  steps         String   @default("[]") // JSON array of step results
+  status        String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  result        String?  // Final result summary
+  triggeredBy   String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([workflowType])
+  @@index([status])
+  @@index([createdAt])
+}

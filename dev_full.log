@@ -1,0 +1,12 @@
+
+> ai-hr-employee@0.1.0 dev
+> next dev --webpack
+
+Γû▓ Next.js 16.2.10 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.224.1:3000
+Γ£ô Ready in 972ms
+ΓÜá Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\sriva\.gemini\antigravity\scratch\ai-hr-employee\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\sriva\.gemini\antigravity\scratch\ai-hr-employee\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+  Skipping creating a lockfile at C:\Users\sriva\.gemini\antigravity\scratch\ai-hr-employee\.next\dev\lock because we're using WASM bindings
+
