@@ -46,10 +46,15 @@ export default function WorkflowConsolePage() {
     setActiveWorkflow(null);
 
     // Initial parsing to show mock loader timeline to user while executing
+    const normalized = input.toLowerCase();
     const detectOnboarding =
-      input.toLowerCase().includes("join") ||
-      input.toLowerCase().includes("onboard") ||
-      input.toLowerCase().includes("new employee");
+      normalized.includes("join") ||
+      normalized.includes("onboard") ||
+      normalized.includes("new employee");
+
+    const detectInterview =
+      normalized.includes("interview") ||
+      normalized.includes("schedule");
 
     const stepsList: WorkflowStep[] = detectOnboarding
       ? [
@@ -63,6 +68,13 @@ export default function WorkflowConsolePage() {
           { id: "8", name: "Generate Welcome Letter", description: "Compose draft contract welcome letter", status: "PENDING" },
           { id: "9", name: "Generate Employee Checklist", description: "Create interactive task list for HR Portal", status: "PENDING" },
           { id: "10", name: "Complete Database Transaction & Notify", description: "Commit all records and notify dashboard stakeholders", status: "PENDING" },
+        ]
+      : detectInterview
+      ? [
+          { id: "1", name: "Analyze Scheduling Request", description: "Parse interview criteria and candidate pool", status: "RUNNING" },
+          { id: "2", name: "Identify Shortlisted Candidates", description: "Filter candidates matching the criteria", status: "PENDING" },
+          { id: "3", name: "Schedule Interview Slots", description: "Create interview records for qualified candidates", status: "PENDING" },
+          { id: "4", name: "Notify Panel & Candidates", description: "Send dashboard alerts", status: "PENDING" },
         ]
       : [
           { id: "1", name: "Locate Employee Profile", description: "Search database for matching employee", status: "RUNNING" },

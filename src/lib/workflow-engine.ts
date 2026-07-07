@@ -17,7 +17,7 @@ export interface WorkflowStep {
 
 export interface WorkflowResult {
   id: string;
-  workflowType: "ONBOARDING" | "OFFBOARDING" | "PROMOTION" | "PAYROLL" | "LEAVE" | "UNKNOWN";
+  workflowType: "ONBOARDING" | "OFFBOARDING" | "PROMOTION" | "PAYROLL" | "LEAVE" | "INTERVIEW" | "UNKNOWN";
   input: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
   steps: WorkflowStep[];
@@ -63,6 +63,14 @@ export async function parseWorkflowInput(input: string) {
     const salaryMatch = input.match(/(?:salary of|salary to)\s+\$?([0-9,]+)/i);
     const toSalary = salaryMatch?.[1] ? parseFloat(salaryMatch[1].replace(/,/g, "")) : undefined;
     return { type: "PROMOTION" as const, data: { name, toPosition, salaryIncrease: 15, toSalary } };
+  }
+
+  if (normalized.includes("interview") || normalized.includes("schedule") || normalized.includes("panel")) {
+    const jobTitleMatch = input.match(/(?:for|as)\s+([A-Za-z\s]+?)(?:\.|\s+in|\s+with|\s+at|$)/i);
+    const jobTitle = jobTitleMatch?.[1]?.trim() || "";
+    const candidateMatch = input.match(/(?:candidate|with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    const candidateName = candidateMatch?.[1]?.trim() || "";
+    return { type: "INTERVIEW" as const, data: { jobTitle, candidateName } };
   }
 
   if (normalized.includes("leave") || normalized.includes("time off")) {
@@ -593,6 +601,163 @@ export class WorkflowEngine {
     }
   }
 
+  static async runInterviewWorkflow(input: string, triggeredBy: string = "HR System") {
+    const parsed = await parseWorkflowInput(input);
+    if (parsed.type !== "INTERVIEW") {
+      throw new Error("Invalid workflow input for Interview");
+    }
+
+    const { jobTitle, candidateName } = parsed.data;
+
+    const steps: WorkflowStep[] = [
+      { id: "1", name: "Analyze Scheduling Request", description: "Parse interview criteria and candidate pool", status: "PENDING" },
+      { id: "2", name: "Identify Shortlisted Candidates", description: "Filter candidates matching the criteria", status: "PENDING" },
+      { id: "3", name: "Schedule Interview Slots", description: "Create interview records for qualified candidates", status: "PENDING" },
+      { id: "4", name: "Notify Panel & Candidates", description: "Send dashboard alerts", status: "PENDING" },
+    ];
+
+    const log = await prisma.workflowLog.create({
+      data: {
+        workflowType: "INTERVIEW",
+        input,
+        status: "RUNNING",
+        steps: JSON.stringify(steps),
+        triggeredBy,
+        startedAt: new Date(),
+      },
+    });
+
+    const updateStep = async (stepId: string, status: WorkflowStep["status"], result?: string) => {
+      const idx = steps.findIndex((s) => s.id === stepId);
+      if (idx !== -1) {
+        steps[idx].status = status;
+        steps[idx].result = result;
+        steps[idx].updatedAt = new Date().toISOString();
+        await prisma.workflowLog.update({
+          where: { id: log.id },
+          data: { steps: JSON.stringify(steps) },
+        });
+      }
+    };
+
+    try {
+      await updateStep("1", "RUNNING");
+      await sleep(800);
+
+      const interviewType = jobTitle.includes("tech") || jobTitle.includes("engineer") || jobTitle.includes("developer")
+        ? "Technical Interview" : "HR Screening";
+      await updateStep("1", "COMPLETED", `Classified as: ${interviewType}`);
+
+      await updateStep("2", "RUNNING");
+      await sleep(1000);
+
+      const candidates = await prisma.candidate.findMany({
+        where: {
+          status: { in: ["APPLIED", "SCREENING", "SHORTLISTED"] },
+          ...(candidateName ? { name: { contains: candidateName } } : {}),
+          ...(jobTitle ? { jobOpening: { title: { contains: jobTitle } } } : {}),
+        },
+        include: { jobOpening: { select: { title: true } } },
+      });
+
+      if (candidates.length === 0) {
+        throw new Error("No eligible candidates found for interview scheduling");
+      }
+      await updateStep("2", "COMPLETED", `Found ${candidates.length} candidate(s) for scheduling`);
+
+      await updateStep("3", "RUNNING");
+      await sleep(1000);
+
+      const scheduledInterviews = [];
+      for (const candidate of candidates) {
+        const interview = await prisma.interview.create({
+          data: {
+            candidateId: candidate.id,
+            scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+            duration: 60,
+            type: interviewType,
+            panelMembers: "Sarah Jenkins, Robert Kovac",
+            location: "Google Meet",
+            status: "SCHEDULED",
+            notes: `Auto-scheduled by AI workflow: ${input}`,
+          },
+        });
+        scheduledInterviews.push(interview);
+
+        await prisma.candidate.update({
+          where: { id: candidate.id },
+          data: { status: "INTERVIEW" },
+        });
+      }
+      await updateStep("3", "COMPLETED", `Created ${scheduledInterviews.length} interview record(s)`);
+
+      await updateStep("4", "RUNNING");
+      await sleep(800);
+
+      for (const candidate of candidates) {
+        const user = await prisma.user.findFirst();
+        if (user) {
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              title: "Interview Scheduled",
+              message: `AI workflow scheduled a ${interviewType} for ${candidate.name}.`,
+              type: "WORKFLOW",
+              link: "/interviews",
+            },
+          });
+        }
+      }
+      await updateStep("4", "COMPLETED", "Stakeholders notified successfully");
+
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: {
+          status: "COMPLETED",
+          result: `Scheduled ${scheduledInterviews.length} interview(s) via AI workflow`,
+          completedAt: new Date(),
+        },
+      });
+
+      return {
+        id: log.id,
+        workflowType: "INTERVIEW" as const,
+        input,
+        status: "COMPLETED" as const,
+        steps,
+        resultSummary: `Scheduled ${scheduledInterviews.length} interview(s) for ${candidates.map(c => c.name).join(", ")}`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    } catch (error: any) {
+      const runningStep = steps.find((s) => s.status === "RUNNING");
+      if (runningStep) {
+        await updateStep(runningStep.id, "FAILED", error.message || "Unexpected failure");
+      }
+      for (const step of steps) {
+        if (step.status === "PENDING" || step.status === "RUNNING") {
+          await updateStep(step.id, "FAILED", "Cancelled due to previous error");
+        }
+      }
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: {
+          status: "FAILED",
+          result: `Interview workflow failed: ${error.message || "Unknown error"}`,
+          completedAt: new Date(),
+        },
+      });
+      return {
+        id: log.id,
+        workflowType: "INTERVIEW" as const,
+        input,
+        status: "FAILED" as const,
+        steps,
+        resultSummary: `Interview scheduling failed: ${error.message || "Unknown error"}`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    }
+  }
+
   static async runGeneralWorkflow(input: string, triggeredBy: string = "HR System") {
     const parsed = await parseWorkflowInput(input);
     
@@ -602,6 +767,10 @@ export class WorkflowEngine {
     
     if (parsed.type === "PROMOTION") {
       return this.runPromotion(input, triggeredBy);
+    }
+
+    if (parsed.type === "INTERVIEW") {
+      return this.runInterviewWorkflow(input, triggeredBy);
     }
 
     // Default mock workflow for other inputs
