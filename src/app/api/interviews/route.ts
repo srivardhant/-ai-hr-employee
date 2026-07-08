@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { interviewSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 export async function GET() {
   try {
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
     return NextResponse.json(interview);
   } catch (error: any) {
     console.error("Interview scheduling POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to schedule interview" },
       { status: 400 }

@@ -417,58 +417,70 @@ export default function OnboardingPage() {
             </div>
 
             {/* Checklist */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                HR Orientation Checklist
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40">
-                {getChecklistArray(selectedOnboarding.checklist).map((chk: any) => (
-                  <div key={chk.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      defaultChecked={chk.done}
-                      disabled
-                      className="w-4 h-4 rounded border-slate-300 bg-slate-100 text-indigo-650"
-                    />
-                    <span className="text-xs text-slate-700 dark:text-slate-350">{chk.task}</span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  HR Orientation Checklist
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40">
+                  {getChecklistArray(selectedOnboarding.checklist).length === 0 ? (
+                    <p className="text-xs text-slate-400 col-span-full text-center py-4">No checklist items yet.</p>
+                  ) : (
+                    getChecklistArray(selectedOnboarding.checklist).map((chk: any) => (
+                      <div key={chk.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={chk.done}
+                          disabled
+                          className="w-4 h-4 rounded border-slate-300 bg-slate-100 text-indigo-650"
+                        />
+                        <span className="text-xs text-slate-700 dark:text-slate-350">{chk.task}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Orientation */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Week 1 Induction Schedule
-              </h4>
-              <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40 divide-y divide-slate-200/50 dark:divide-slate-800/40 space-y-3">
-                {getOrientationArray(selectedOnboarding.orientationSchedule).map((sched: any, sIdx: number) => (
-                  <div key={sIdx} className="flex items-start gap-4 pt-3 first:pt-0">
-                    <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded border border-indigo-500/20">
-                      {sched.day}
-                    </span>
-                    <div className="space-y-0.5">
-                      <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {sched.title} - <span className="text-slate-400">{sched.time}</span>
-                      </h5>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-450">{sched.notes}</p>
-                    </div>
-                  </div>
-                ))}
+              {/* Orientation */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Week 1 Induction Schedule
+                </h4>
+                <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40 divide-y divide-slate-200/50 dark:divide-slate-800/40 space-y-3">
+                  {getOrientationArray(selectedOnboarding.orientationSchedule).length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">No orientation schedule set.</p>
+                  ) : (
+                    getOrientationArray(selectedOnboarding.orientationSchedule).map((sched: any, sIdx: number) => (
+                      <div key={sIdx} className="flex items-start gap-4 pt-3 first:pt-0">
+                        <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded border border-indigo-500/20">
+                          {sched.day}
+                        </span>
+                        <div className="space-y-0.5">
+                          <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {sched.title} - <span className="text-slate-400">{sched.time}</span>
+                          </h5>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-450">{sched.notes}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Welcome Letter */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Contracts Welcome Letter
-              </h4>
-              <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40 max-h-[180px] overflow-y-auto custom-scrollbar">
-                <pre className="text-[11px] text-slate-650 dark:text-slate-400 font-sans whitespace-pre-wrap leading-relaxed">
-                  {selectedOnboarding.welcomeLetter}
-                </pre>
+              {/* Welcome Letter */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Contracts Welcome Letter
+                </h4>
+                <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/40 max-h-[180px] overflow-y-auto custom-scrollbar">
+                  {selectedOnboarding.welcomeLetter ? (
+                    <pre className="text-[11px] text-slate-650 dark:text-slate-400 font-sans whitespace-pre-wrap leading-relaxed">
+                      {selectedOnboarding.welcomeLetter}
+                    </pre>
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-4">No welcome letter generated.</p>
+                  )}
+                </div>
               </div>
-            </div>
 
             <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800/80">
               <Button variant="ghost" onClick={() => setIsDetailsOpen(false)}>

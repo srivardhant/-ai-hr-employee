@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { leaveSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 export async function GET(request: Request) {
   try {
@@ -58,6 +59,12 @@ export async function POST(request: Request) {
     return NextResponse.json(leave);
   } catch (error: any) {
     console.error("Leave apply POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message || "Validation failed" },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: error.message || "Failed to submit leave request" },
       { status: 400 }

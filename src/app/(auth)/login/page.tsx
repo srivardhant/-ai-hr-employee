@@ -61,18 +61,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Simulate auth - store role in localStorage for demo
-      const role = selectedRole || "HR";
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email,
-          role,
-          name:
-            roles.find((r) => r.id === role)?.label || "User",
-        })
-      );
-      toast.success("Welcome to AI HR Employee!");
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+
+      const userData = await res.json();
+      localStorage.setItem("user", JSON.stringify(userData));
+      toast.success(`Welcome, ${userData.name}!`);
       await new Promise((r) => setTimeout(r, 800));
       router.push("/");
     } catch {

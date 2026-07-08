@@ -225,8 +225,10 @@ export default function InterviewsPage() {
               </div>
               <div className="grid grid-cols-7 text-xs text-slate-500 min-h-[350px]">
                 {Array.from({ length: 35 }).map((_, idx) => {
-                  const day = idx - 2; // offset to align days
-                  const hasInterview = day === 7 || day === 15 || day === 22;
+                  const day = idx - 2;
+                  const dayInterviews = day > 0 && day <= 31
+                    ? interviews.filter((int) => new Date(int.scheduledAt).getDate() === day)
+                    : [];
                   
                   return (
                     <div
@@ -236,10 +238,16 @@ export default function InterviewsPage() {
                       }`}
                     >
                       <span className="font-semibold">{day > 0 && day <= 31 ? day : ""}</span>
-                      {day > 0 && day <= 31 && hasInterview && (
-                        <div className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 p-1 rounded font-bold text-[9px] truncate">
-                          Tech Review
+                      {dayInterviews.slice(0, 2).map((int) => (
+                        <div
+                          key={int.id}
+                          className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 p-1 rounded font-bold text-[9px] truncate mt-0.5"
+                        >
+                          {int.type}
                         </div>
+                      ))}
+                      {dayInterviews.length > 2 && (
+                        <span className="text-[8px] text-slate-400 font-semibold">+{dayInterviews.length - 2} more</span>
                       )}
                     </div>
                   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evaluationSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 import { generateEvaluationSummary } from "@/lib/ai";
 
 export async function GET() {
@@ -77,6 +78,9 @@ export async function POST(request: Request) {
     return NextResponse.json(evaluation);
   } catch (error: any) {
     console.error("Evaluation POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to create evaluation" },
       { status: 400 }

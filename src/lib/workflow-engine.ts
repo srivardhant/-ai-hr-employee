@@ -37,9 +37,10 @@ export async function parseWorkflowInput(input: string) {
   const normalized = input.toLowerCase();
 
   if (normalized.includes("join") || normalized.includes("onboard") || normalized.includes("new employee") || normalized.includes("hire")) {
-    const joinedMatch = input.match(/(?:employee|onboard|hire)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
-    const joinedMatch2 = input.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:joined|started|has joined)/);
-    let name = joinedMatch?.[1] || joinedMatch2?.[1] || "John Doe";
+    const namedMatch = input.match(/(?:named|name)\s+((?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+))(?=\s+(?:as|for|in|with|at|to)\b)/i);
+    const joinedMatch = input.match(/((?:[A-Z][a-z]+\s+)+[A-Z][a-z]+)\s+(?:joined|started|has joined)/i);
+    const asMatch = input.match(/((?:[A-Z][a-z]+\s+)+[A-Z][a-z]+)\s+as\s+(?:a|an)?\s*[A-Z]/i);
+    let name = namedMatch?.[1]?.trim() || joinedMatch?.[1]?.trim() || asMatch?.[1]?.trim() || "John Doe";
     const positionMatch = input.match(/(?:as|position|role)\s+([A-Za-z\s]+?)(?:\.|\s+in|\s+joined|\s+with|\s+at|$)/);
     let position = positionMatch?.[1]?.trim() || "Software Engineer";
     const posLower = position.toLowerCase();
@@ -56,18 +57,23 @@ export async function parseWorkflowInput(input: string) {
   }
 
   if (normalized.includes("promote") || normalized.includes("promotion")) {
-    const nameMatch = input.match(/(?:promote|promotion for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
-    const name = nameMatch?.[1] || "";
-    const positionMatch = input.match(/(?:to|position as)\s+([A-Za-z\s]+?)(?:\.|\s+with|\s+salary|$)/i);
+    const nameMatch = input.match(/(?:promote|promotion for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})(?=\s+(?:to|as|with|at)\b)/i);
+    const name = nameMatch?.[1]?.trim() || "";
+    const positionMatch = input.match(/(?:to|as)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*?)(?=\s+(?:with|salary)|\s+\$|$)/i);
     const toPosition = positionMatch?.[1]?.trim() || "Senior Lead";
-    const salaryMatch = input.match(/(?:salary of|salary to)\s+\$?([0-9,]+)/i);
+    const salaryMatch = input.match(/(?:salary of|salary to|with salary|salary)\s+\$?([0-9,]+)/i);
     const toSalary = salaryMatch?.[1] ? parseFloat(salaryMatch[1].replace(/,/g, "")) : undefined;
     return { type: "PROMOTION" as const, data: { name, toPosition, salaryIncrease: 15, toSalary } };
   }
 
   if (normalized.includes("interview") || normalized.includes("schedule") || normalized.includes("panel")) {
     const jobTitleMatch = input.match(/(?:for|as)\s+([A-Za-z\s]+?)(?:\.|\s+in|\s+with|\s+at|$)/i);
-    const jobTitle = jobTitleMatch?.[1]?.trim() || "";
+    let jobTitle = jobTitleMatch?.[1]?.trim() || "";
+    const skipWords = ["shortlisted", "candidates", "all", "qualified", "new", "every", "each", "the", "a", "an"];
+    const words = jobTitle.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    if (words.length > 0 && words.every(w => skipWords.includes(w))) {
+      jobTitle = "";
+    }
     const candidateMatch = input.match(/(?:candidate|with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
     const candidateName = candidateMatch?.[1]?.trim() || "";
     return { type: "INTERVIEW" as const, data: { jobTitle, candidateName } };
@@ -161,7 +167,13 @@ export class WorkflowEngine {
         },
       });
 
-      const placeholderId = generateEmployeeId(await prisma.employee.count() + 1);
+      const allIds = await prisma.employee.findMany({ select: { employeeId: true }, orderBy: { employeeId: "desc" } });
+      let nextSeq = 1;
+      for (const e of allIds) {
+        const num = parseInt(e.employeeId.replace("EMP-", ""));
+        if (num >= nextSeq) nextSeq = num + 1;
+      }
+      const placeholderId = generateEmployeeId(nextSeq);
       employeeProfile = await prisma.employee.create({
         data: {
           employeeId: placeholderId,
@@ -179,9 +191,14 @@ export class WorkflowEngine {
 
       // Step 2: Generate Employee ID
       await updateStep("2", "RUNNING");
-      await sleep(1000);
-      const count = await prisma.employee.count();
-      employeeIdGenerated = generateEmployeeId(count + 1);
+      await sleep(500);
+      const existingIds = await prisma.employee.findMany({ select: { employeeId: true }, orderBy: { employeeId: "desc" } });
+      let maxSeq = 1;
+      for (const e of existingIds) {
+        const num = parseInt(e.employeeId.replace("EMP-", ""));
+        if (num >= maxSeq) maxSeq = num + 1;
+      }
+      employeeIdGenerated = generateEmployeeId(maxSeq);
       
       await prisma.employee.update({
         where: { id: employeeProfile.id },
@@ -644,7 +661,7 @@ export class WorkflowEngine {
       await updateStep("1", "RUNNING");
       await sleep(800);
 
-      const interviewType = jobTitle.includes("tech") || jobTitle.includes("engineer") || jobTitle.includes("developer")
+      const interviewType = jobTitle && (jobTitle.includes("tech") || jobTitle.includes("engineer") || jobTitle.includes("developer"))
         ? "Technical Interview" : "HR Screening";
       await updateStep("1", "COMPLETED", `Classified as: ${interviewType}`);
 

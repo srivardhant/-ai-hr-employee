@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { performanceSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 import { generatePerformanceSuggestions } from "@/lib/ai";
 
 export async function GET(request: Request) {
@@ -35,10 +36,20 @@ export async function POST(request: Request) {
 
     const ratingVal = validated.rating;
 
+    let achievementsArr: string[] = [];
+    if (validated.achievements) {
+      try {
+        achievementsArr = JSON.parse(validated.achievements);
+        if (!Array.isArray(achievementsArr)) achievementsArr = [validated.achievements];
+      } catch {
+        achievementsArr = [validated.achievements];
+      }
+    }
+
     const aiResult = await generatePerformanceSuggestions(
       "Employee",
       ratingVal,
-      validated.achievements ? JSON.parse(validated.achievements) : [],
+      achievementsArr,
       validated.areasOfImprovement ? validated.areasOfImprovement.split(",").map(s => s.trim()) : []
     );
     let aiSuggestions = aiResult?.suggestions?.join("\n") || "";
@@ -71,6 +82,9 @@ export async function POST(request: Request) {
     return NextResponse.json(review);
   } catch (error: any) {
     console.error("Performance POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to create performance review" },
       { status: 400 }

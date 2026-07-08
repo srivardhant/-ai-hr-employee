@@ -7,10 +7,14 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get("role") || "HR";
     const email = searchParams.get("email") || "";
 
-    // Find the employee record for the logged-in user
-    const employee = email
-      ? await prisma.employee.findFirst({ where: { email } })
-      : null;
+    // Find the employee record via userId from the logged-in user's email
+    let employee = null;
+    if (email) {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        employee = await prisma.employee.findUnique({ where: { userId: user.id } });
+      }
+    }
 
     const today = new Date();
     const currentMonth = today.getMonth() + 1;

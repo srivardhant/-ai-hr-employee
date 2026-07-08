@@ -84,8 +84,9 @@ export default function PayrollPage() {
   const handleSelectEmployee = (empId: string) => {
     const emp = employees.find((e) => e.id === empId);
     if (emp) {
-      const monthlyBase = Math.round(emp.salary / 12);
-      const estTax = Math.round(monthlyBase * 0.15); // est 15% tax
+      const salary = emp.salary || 0;
+      const monthlyBase = Math.round(salary / 12);
+      const estTax = Math.round(monthlyBase * 0.15);
       setForm((prev) => ({
         ...prev,
         employeeId: empId,

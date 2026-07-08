@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Modal } from "@/components/ui/Modal";
-import { GraduationCap, Plus, Award, PlayCircle, BookOpen } from "lucide-react";
+import { Plus, Award, PlayCircle, BookOpen } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function TrainingPage() {
@@ -130,6 +130,38 @@ export default function TrainingPage() {
     }
   };
 
+  const handleAssignCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignForm.employeeId || !assignForm.trainingId) {
+      toast.error("Please select both employee and course.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/training", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: assignForm.employeeId,
+          trainingId: assignForm.trainingId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.id) {
+        toast.success("Course assigned successfully!");
+        setIsAssignModalOpen(false);
+        setAssignForm({ employeeId: "", trainingId: "" });
+        fetchData();
+      } else {
+        toast.error(data.error || "Failed to assign course");
+      }
+    } catch (e) {
+      toast.error("Error assigning course.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSimulateProgress = async (assignmentId: string, currentProgress: number) => {
     const nextProgress = Math.min(100, currentProgress + 20);
     try {
@@ -220,6 +252,13 @@ export default function TrainingPage() {
         action={
           !isEmployee && (
             <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                icon={<BookOpen className="w-4 h-4" />}
+                onClick={() => setIsAssignModalOpen(true)}
+              >
+                Assign Course
+              </Button>
               <Button
                 variant="primary"
                 icon={<Plus className="w-4 h-4" />}
@@ -346,6 +385,36 @@ export default function TrainingPage() {
           </Card>
         </div>
       </div>
+
+      {/* Assign Course Modal */}
+      <Modal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        title="Assign Training Course to Employee"
+      >
+        <form onSubmit={handleAssignCourse} className="space-y-4">
+          <Select
+            label="Select Employee"
+            options={employees.map((e) => ({ value: e.id, label: `${e.name} (${e.employeeId})` }))}
+            value={assignForm.employeeId}
+            placeholder="Choose Employee"
+            required
+            onChange={(e) => setAssignForm({ ...assignForm, employeeId: e.target.value })}
+          />
+          <Select
+            label="Select Course"
+            options={trainings.map((t) => ({ value: t.id, label: t.title }))}
+            value={assignForm.trainingId}
+            placeholder="Choose Course"
+            required
+            onChange={(e) => setAssignForm({ ...assignForm, trainingId: e.target.value })}
+          />
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" loading={submitting}>Assign Course</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add Course Modal */}
       <Modal

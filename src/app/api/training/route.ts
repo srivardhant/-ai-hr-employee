@@ -5,13 +5,20 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get("employeeId");
+    const all = searchParams.get("all");
+
+    if (all === "true") {
+      const assignments = await prisma.trainingAssignment.findMany({
+        include: { training: true, employee: true },
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json(assignments);
+    }
 
     if (employeeId) {
       const assignments = await prisma.trainingAssignment.findMany({
         where: { employeeId },
-        include: {
-          training: true,
-        },
+        include: { training: true },
       });
       return NextResponse.json(assignments);
     }
@@ -27,7 +34,30 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { title, description, category, duration, mandatory } = await request.json();
+    const body = await request.json();
+
+    // Assignment creation
+    if (body.employeeId && body.trainingId) {
+      const existing = await prisma.trainingAssignment.findFirst({
+        where: { employeeId: body.employeeId, trainingId: body.trainingId },
+      });
+      if (existing) {
+        return NextResponse.json({ error: "Course already assigned to this employee" }, { status: 400 });
+      }
+
+      const assignment = await prisma.trainingAssignment.create({
+        data: {
+          employeeId: body.employeeId,
+          trainingId: body.trainingId,
+          status: "NOT_STARTED",
+          progress: 0,
+        },
+        include: { training: true, employee: true },
+      });
+      return NextResponse.json(assignment);
+    }
+
+    const { title, description, category, duration, mandatory } = body;
 
     if (!title || !description) {
       return NextResponse.json({ error: "Title and description are required" }, { status: 400 });

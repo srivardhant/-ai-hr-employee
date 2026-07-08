@@ -79,8 +79,8 @@ export default function PromotionsPage() {
   const handleSelectEmployee = (empId: string) => {
     const emp = employees.find((e) => e.id === empId);
     if (emp) {
-      // Suggesting 15% salary increase by default
-      const suggestedSalary = Math.round(emp.salary * 1.15);
+      const salary = emp.salary || 0;
+      const suggestedSalary = Math.round(salary * 1.15);
       setForm((prev) => ({
         ...prev,
         employeeId: empId,

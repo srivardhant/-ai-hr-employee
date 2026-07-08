@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { employeeSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 import { generateEmployeeId, generateCompanyEmail } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -122,6 +123,9 @@ export async function POST(request: Request) {
     return NextResponse.json(employee);
   } catch (error: any) {
     console.error("Employee POST API error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to create employee" },
       { status: 400 }

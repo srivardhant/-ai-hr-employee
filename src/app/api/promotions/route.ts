@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { promotionSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 export async function GET(request: Request) {
   try {
@@ -40,7 +41,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
-    const revisionPct = Math.round(((validated.toSalary - employee.salary) / employee.salary) * 100);
+    const revisionPct = employee.salary > 0
+      ? Math.round(((validated.toSalary - employee.salary) / employee.salary) * 100)
+      : 0;
 
     const promotion = await prisma.promotion.create({
       data: {
@@ -58,6 +61,9 @@ export async function POST(request: Request) {
     return NextResponse.json(promotion);
   } catch (error: any) {
     console.error("Promotion POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to submit promotion proposal" },
       { status: 400 }

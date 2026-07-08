@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { payrollSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 export async function GET(request: Request) {
   try {
@@ -76,6 +77,9 @@ export async function POST(request: Request) {
     return NextResponse.json(payroll);
   } catch (error: any) {
     console.error("Payroll POST error:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Validation failed" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to create payroll" },
       { status: 400 }
