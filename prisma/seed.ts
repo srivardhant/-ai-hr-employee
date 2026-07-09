@@ -30,14 +30,17 @@ async function main() {
 
   console.log("Cleared database.");
 
-  // 2. Hash Password
-  const hashedPassword = await bcrypt.hash("password123", 10);
+  // 2. Helper to hash per-user passwords
+  const passwordFor = async (name: string) => {
+    const plain = name.toLowerCase().replace(/\s+/g, "") + "123";
+    return bcrypt.hash(plain, 10);
+  };
 
   // 3. Create core Users (Admin, HR, Manager, Employee)
   const userAdmin = await prisma.user.create({
     data: {
       email: "admin@aihr.com",
-      password: hashedPassword,
+      password: await passwordFor("Marcus Aurelius"),
       name: "Marcus Aurelius",
       role: "ADMIN",
     },
@@ -46,7 +49,7 @@ async function main() {
   const userHR = await prisma.user.create({
     data: {
       email: "hr@aihr.com",
-      password: hashedPassword,
+      password: await passwordFor("Sarah Jenkins"),
       name: "Sarah Jenkins",
       role: "HR",
     },
@@ -55,7 +58,7 @@ async function main() {
   const userManager = await prisma.user.create({
     data: {
       email: "manager@aihr.com",
-      password: hashedPassword,
+      password: await passwordFor("Robert Kovac"),
       name: "Robert Kovac",
       role: "MANAGER",
     },
@@ -64,7 +67,7 @@ async function main() {
   const userEmployee = await prisma.user.create({
     data: {
       email: "employee@aihr.com",
-      password: hashedPassword,
+      password: await passwordFor("Emma Watson"),
       name: "Emma Watson",
       role: "EMPLOYEE",
     },
@@ -161,7 +164,7 @@ async function main() {
     const user = await prisma.user.create({
       data: {
         email: companyEmail,
-        password: hashedPassword,
+        password: await passwordFor(name),
         name,
         role: "EMPLOYEE",
       },
