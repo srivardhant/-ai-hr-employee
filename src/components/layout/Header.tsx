@@ -23,7 +23,6 @@ import {
   GraduationCap,
   FileText,
   UserPlus,
-  ArrowLeftRight,
   type LucideIcon,
 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
@@ -36,7 +35,6 @@ interface HeaderProps {
   userAvatar?: string;
   onLogout?: () => void;
   onMenuToggle?: () => void;
-  onSwitchRole?: (role: string) => void;
 }
 
 interface SearchResult {
@@ -83,7 +81,6 @@ export default function Header({
   userAvatar,
   onLogout,
   onMenuToggle,
-  onSwitchRole,
 }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +91,7 @@ export default function Header({
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [quickStats, setQuickStats] = useState<{ label: string; value: string; color: string }[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -132,6 +130,25 @@ export default function Header({
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Quick Stats
+  const fetchQuickStats = useCallback(async () => {
+    try {
+      const [emps, leaves] = await Promise.all([
+        fetch('/api/employees').then(r => r.ok ? r.json() : []),
+        fetch('/api/leave').then(r => r.ok ? r.json() : []),
+      ]);
+      const pendingLeaves = leaves.filter((l: any) => l.status === 'PENDING').length;
+      setQuickStats([
+        { label: 'Employees', value: String(emps.length || 0), color: 'indigo' },
+        { label: 'Pending Leaves', value: String(pendingLeaves), color: 'amber' },
+      ]);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (dropdownOpen) fetchQuickStats();
+  }, [dropdownOpen, fetchQuickStats]);
 
   // Search
   useEffect(() => {
@@ -509,18 +526,20 @@ export default function Header({
                   <DropdownItem icon={User} label="Profile" />
                   <DropdownItem icon={Settings} label="Settings" />
                   <div className="my-1.5 border-t border-slate-100 dark:border-slate-700/50" />
-                  <div className="px-4 py-1.5">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Switch Role</p>
-                    {["ADMIN", "HR", "MANAGER", "EMPLOYEE"].map((role) => (
-                      <button
-                        key={role}
-                        onClick={() => onSwitchRole?.(role)}
-                        className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                      >
-                        <ArrowLeftRight size={12} />
-                        {role.charAt(0) + role.slice(1).toLowerCase()}
-                      </button>
-                    ))}
+                  <div className="px-4 py-2">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Quick Stats</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {quickStats.length > 0 ? quickStats.map((s) => (
+                        <div key={s.label} className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-center">
+                          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{s.value}</p>
+                          <p className="text-[10px] text-slate-400">{s.label}</p>
+                        </div>
+                      )) : (
+                        <div className="col-span-2 text-center py-2">
+                          <Loader2 size={14} className="animate-spin text-slate-400 mx-auto" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="my-1.5 border-t border-slate-100 dark:border-slate-700/50" />
                   <DropdownItem

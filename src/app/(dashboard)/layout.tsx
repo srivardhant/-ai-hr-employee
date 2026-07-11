@@ -79,14 +79,6 @@ export default function DashboardLayout({
     router.push("/login");
   };
 
-  const handleSwitchRole = (role: string) => {
-    if (!user) return;
-    const updated = { ...user, role };
-    localStorage.setItem("user", JSON.stringify(updated));
-    setUser(updated);
-    window.location.href = "/";
-  };
-
   if (!mounted) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -146,7 +138,6 @@ export default function DashboardLayout({
           userRole={user?.role || "Administrator"}
           onLogout={handleLogout}
           onMenuToggle={() => setMobileOpen(true)}
-          onSwitchRole={handleSwitchRole}
         />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 mt-[72px] overflow-y-auto max-w-[1600px] w-full mx-auto animate-fade-in">
