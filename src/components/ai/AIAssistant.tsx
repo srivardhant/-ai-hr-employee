@@ -19,12 +19,14 @@ const SUGGESTIONS = [
 ];
 
 async function fetchJson(url: string) {
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
 }
 
-function fmt(n: number) { return n.toLocaleString(); }
+function fmt(n: number) { return (n || 0).toLocaleString(); }
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false);
@@ -53,111 +55,125 @@ export default function AIAssistant() {
     setLoading(true);
 
     const q = text.toLowerCase().trim();
+    let answer = "";
 
     try {
-      let answer = "";
-
-      // Count employees
-      if (q.includes("how many") || (q.includes("employee") && (q.includes("count") || q.includes("total") || q.includes("many")))) {
+      // --- Employee count ---
+      if (/how many|employee.*(?:count|total|many)|headcount/.test(q)) {
         const emps = await fetchJson("/api/employees");
-        if (emps && emps.length) {
-          answer = `We have **${emps.length} employees** total.`;
-        }
+        if (emps?.length) answer = `We have **${emps.length} employees** total across all departments.`;
       }
-      // Department lookup
-      else if (q.match(/(?:show|list|who|which|tell)\s+.*(?:in|team|department|dept)/)) {
-        const depts = ["engineering", "design", "marketing", "sales", "finance", "hr"];
-        const matched = depts.find((d) => q.includes(d));
-        if (matched) {
-          const emps = await fetchJson(`/api/employees?department=${matched.charAt(0).toUpperCase() + matched.slice(1)}`);
-          if (emps && emps.length) {
+
+      // --- Department team ---
+      else if (/(?:show|list|who|which|tell|team|department)\s+.*(?:engineering|design|marketing|sales|finance|hr)/i.test(q)) {
+        const depts: Record<string, string> = { engineering:"Engineering", design:"Design", marketing:"Marketing", sales:"Sales", finance:"Finance", hr:"HR" };
+        const match = Object.keys(depts).find(d => q.includes(d) || q.includes(depts[d].toLowerCase()));
+        if (match) {
+          const emps = await fetchJson(`/api/employees?department=${depts[match]}`);
+          if (emps?.length) {
             const lines = emps.map((e: any) => `• **${e.name}** — ${e.position}`).join("\n");
-            answer = `**${matched.charAt(0).toUpperCase() + matched.slice(1)}** team (${emps.length}):\n${lines}`;
+            answer = `**${depts[match]}** team (${emps.length}):\n${lines}`;
           }
         }
-        if (!answer) answer = "Which department? Try: Engineering, Design, Marketing, Sales, Finance, or HR.";
+        if (!answer) answer = "I couldn't find that department. Try: Engineering, Design, Marketing, Sales, Finance, or HR.";
       }
-      // Who is X?
-      else if (q.match(/who(?:'s| is)\s+(.+)/)) {
-        const name = q.match(/who(?:'s| is)\s+(.+)/)?.[1]?.trim();
+
+      // --- Who is X? ---
+      else if (/^who(?:'s| is)\s+(.+)/i.test(q)) {
+        const name = q.match(/^who(?:'s| is)\s+(.+)/i)?.[1]?.trim();
         if (name) {
           const emps = await fetchJson(`/api/employees?search=${encodeURIComponent(name)}`);
-          if (emps && emps.length) {
+          if (emps?.length) {
             const e = emps[0];
-            answer = `**${e.name}** (${e.employeeId})\n• Role: ${e.position}\n• Department: ${e.department}\n• Salary: $${fmt(e.salary || 0)}\n• Status: ${e.status || "Active"}`;
+            answer = `**${e.name}** (${e.employeeId})\n• Role: ${e.position}\n• Department: ${e.department}\n• Salary: $${fmt(e.salary)}\n• Status: ${e.status || "Active"}`;
           } else {
-            answer = `I couldn't find anyone matching "${name}" in the employee records.`;
+            answer = `No employee found matching "${name}".`;
           }
         }
       }
-      // Leaves
-      else if (q.includes("leave") || q.includes("time off") || q.includes("vacation") || q.includes("pto")) {
+
+      // --- Leaves ---
+      else if (/leave|time off|vacation|pto|sick/.test(q)) {
         const leaves = await fetchJson("/api/leave");
-        if (leaves && leaves.length) {
+        if (leaves?.length) {
           const pending = leaves.filter((l: any) => l.status === "PENDING");
           const approved = leaves.filter((l: any) => l.status === "APPROVED");
-          answer = `Found **${leaves.length} leave records** (${pending.length} pending, ${approved.length} approved).`;
+          answer = `**${leaves.length} leave records** (${pending.length} pending, ${approved.length} approved).`;
           if (pending.length) {
-            answer += `\nPending:\n${pending.slice(0, 3).map((l: any) => `• ${l.employee?.name || "Someone"} — ${l.days}d ${l.type} (${l.status})`).join("\n")}`;
+            answer += `\nPending:\n${pending.slice(0, 5).map((l: any) => `• ${l.employee?.name || "Someone"} — ${l.days} day(s) ${l.type} (${l.reason || "no reason"})`).join("\n")}`;
           }
         } else {
           answer = "No leave records found.";
         }
       }
-      // Payroll
-      else if (q.includes("payroll") || q.includes("salary") || q.includes("pay")) {
+
+      // --- Payroll ---
+      else if (/payroll|salary|pay|compensation/.test(q)) {
         const payrolls = await fetchJson("/api/payroll");
-        if (payrolls && payrolls.length) {
+        if (payrolls?.length) {
           const total = payrolls.reduce((s: number, p: any) => s + (p.netPay || 0), 0);
           const months = [...new Set(payrolls.map((p: any) => `${p.month}/${p.year}`))];
-          answer = `**${payrolls.length} payroll records** across ${months.length} month(s). Total net pay: **$${fmt(total)}**.`;
+          const avg = total / payrolls.length;
+          answer = `**${payrolls.length} payroll records** across ${months.length} month(s).\nTotal net pay: **$${fmt(total)}**\nAverage per record: **$${fmt(Math.round(avg))}**`;
         } else {
           answer = "No payroll records found.";
         }
       }
-      // Promotions
-      else if (q.includes("promotion") || q.includes("promote") || q.includes("career")) {
+
+      // --- Promotions ---
+      else if (/promotion|promote|career|advance/.test(q)) {
         const promos = await fetchJson("/api/promotions");
-        if (promos && promos.length) {
-          answer = `**${promos.length} promotion record(s)** found.\n${promos.slice(0, 3).map((p: any) => `• ${p.employee?.name || "Someone"}: ${p.fromPosition || "?"} → ${p.toPosition} ($${fmt(p.fromSalary)} → $${fmt(p.toSalary)})`).join("\n")}`;
+        if (promos?.length) {
+          answer = `**${promos.length} promotion record(s)**\n${promos.slice(0, 5).map((p: any) => `• ${p.employee?.name || "Someone"}: ${p.fromPosition || "?"} → **${p.toPosition}** ($${fmt(p.fromSalary)} → $${fmt(p.toSalary)})`).join("\n")}`;
         } else {
-          answer = "No promotion records yet.";
+          answer = "No promotions recorded yet.";
         }
       }
-      // Training
-      else if (q.includes("training") || q.includes("course") || q.includes("compliance")) {
-        const trainings = await fetchJson("/api/training");
-        if (trainings && trainings.length) {
-          const overdue = trainings.filter((t: any) => t.status === "OVERDUE" || t.status === "ASSIGNED");
-          answer = `**${trainings.length} training assignments** (${overdue.length} pending/overdue).`;
+
+      // --- Training ---
+      else if (/training|course|compliance|learn/.test(q)) {
+        const assignments = await fetchJson("/api/training?all=true");
+        if (assignments?.length) {
+          const overdue = assignments.filter((a: any) => a.status === "OVERDUE" || a.status === "ASSIGNED");
+          const completed = assignments.filter((a: any) => a.status === "COMPLETED");
+          answer = `**${assignments.length} training assignments** (${overdue.length} pending, ${completed.length} completed).`;
+          if (overdue.length) {
+            answer += `\nPending/Overdue:\n${overdue.slice(0, 5).map((a: any) => `• ${a.employee?.name || "Someone"} — ${a.training?.title || "Unknown course"} (${a.status}, ${a.progress}%)`).join("\n")}`;
+          }
         } else {
-          answer = "No training records found.";
+          const courses = await fetchJson("/api/training");
+          answer = courses?.length ? `**${courses.length} training courses** available. No assignments yet.` : "No training records found.";
         }
       }
-      // Recruitment / candidates
-      else if (q.includes("candidate") || q.includes("recruit") || q.includes("job") || q.includes("hiring") || q.includes("offer")) {
+
+      // --- Candidates / Recruitment ---
+      else if (/candidate|recruit|job|hiring|offer|open.?ing/.test(q)) {
         const cands = await fetchJson("/api/candidates");
-        if (cands && cands.length) {
+        if (cands?.length) {
           const byStatus: Record<string, number> = {};
           for (const c of cands) byStatus[c.status] = (byStatus[c.status] || 0) + 1;
-          const summary = Object.entries(byStatus).map(([k, v]) => `${k}: ${v}`).join(", ");
-          answer = `**${cands.length} candidates** in pipeline (${summary}).`;
+          answer = `**${cands.length} candidates** in pipeline:\n${Object.entries(byStatus).map(([k, v]) => `• ${k}: ${v}`).join("\n")}`;
         } else {
           answer = "No candidates found.";
         }
       }
-      // Performance
-      else if (q.includes("performance") || q.includes("review")) {
-        const evals = await fetchJson("/api/performance");
-        if (evals && evals.length) {
-          const avg = evals.reduce((s: number, e: any) => s + (e.rating || 0), 0) / evals.length;
-          answer = `**${evals.length} performance review(s)**. Average rating: **${avg.toFixed(1)}/5**.`;
+
+      // --- Performance ---
+      else if (/performance|review|rating|appraisal/.test(q)) {
+        const reviews = await fetchJson("/api/performance");
+        if (reviews?.length) {
+          const avg = reviews.reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviews.length;
+          answer = `**${reviews.length} performance review(s)**. Average rating: **${avg.toFixed(1)}/5**.`;
+          if (reviews.length <= 5) {
+            answer += `\n${reviews.map((r: any) => `• ${r.employee?.name || "Someone"}: Q${r.quarter}/${r.year} — ${r.rating}/5`).join("\n")}`;
+          }
         } else {
           answer = "No performance reviews yet.";
         }
       }
-      // Dashboard summary
-      else if (q.includes("summary") || q.includes("dashboard") || q.includes("overview")) {
+
+      // --- Summary ---
+      else if (/summary|dashboard|overview|snapshot/.test(q)) {
         const [emps, cands, leaves, payrolls, promos] = await Promise.all([
           fetchJson("/api/employees"),
           fetchJson("/api/candidates"),
@@ -167,20 +183,26 @@ export default function AIAssistant() {
         ]);
         const empCount = emps?.length || 0;
         const candCount = cands?.length || 0;
-        const leaveCount = leaves?.filter((l: any) => l.status === "PENDING").length || 0;
+        const leavePending = leaves?.filter((l: any) => l.status === "PENDING").length || 0;
         const payrollTotal = payrolls?.reduce((s: number, p: any) => s + (p.netPay || 0), 0) || 0;
         const promoCount = promos?.length || 0;
-        answer = `**Company Snapshot**\n• Employees: **${empCount}**\n• Candidates: **${candCount}**\n• Pending leaves: **${leaveCount}**\n• Payroll total: **$${fmt(payrollTotal)}**\n• Promotions: **${promoCount}**`;
-      }
-      // Fallback
-      else {
-        answer = "I can look up **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance**. Try asking something like 'How many employees?' or 'Show Engineering team'.";
+        answer = `**Company Snapshot**\n• Employees: **${empCount}**\n• Candidates: **${candCount}**\n• Pending leaves: **${leavePending}**\n• Payroll total: **$${fmt(payrollTotal)}**\n• Promotions: **${promoCount}**`;
       }
 
-      if (!answer) answer = "I couldn't find anything for that query. Try rephrasing.";
+      // --- Greeting ---
+      else if (/^(hi|hello|hey|good )/.test(q)) {
+        answer = "Hello! I can look up **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance** from your live HR data. Try asking something!";
+      }
+
+      // --- Fallback ---
+      else {
+        answer = "I can look up live data about **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance**. Try:\n• *\"How many employees?\"*\n• *\"Show Engineering team\"*\n• *\"Who is Emma Watson?\"*\n• *\"Pending leave requests\"*";
+      }
+
+      if (!answer) answer = "I couldn't find anything. Try rephrasing your question.";
       setMessages((prev) => [...prev, { role: "assistant", text: answer }]);
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, I hit an error looking that up. Try again." }]);
+      setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, I hit an error looking that up. Please try again." }]);
     } finally {
       setLoading(false);
     }
