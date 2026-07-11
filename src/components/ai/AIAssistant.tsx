@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, X, Send, Loader2, Sparkles } from "lucide-react";
+import { Bot, X, Send, Loader2, Sparkles, User, Briefcase, DollarSign, Calendar, GraduationCap, Users, Star } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,6 +14,8 @@ const SUGGESTIONS = [
   "Show me employees in Engineering",
   "Who's due for a promotion?",
   "Summarize the dashboard",
+  "Who is Emma Watson?",
+  "What about payroll?",
 ];
 
 export default function AIAssistant() {
@@ -35,6 +37,28 @@ export default function AIAssistant() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const responses = useMemo(() => [
+    { keywords: ["how many", "count", "total", "headcount", "employees"], reply: "We have **18 active employees** across 6 departments: Engineering (4), Design (2), Marketing (3), Sales (2), HR (3), and Finance (2)." },
+    { keywords: ["engineering", "dev", "developer", "tech team"], reply: "The **Engineering** team has 4 members: Robert Kovac (Director), Liam Neeson (Staff Engineer), Noah Centineo (Software Engineer II), and Oliver Jackson (Frontend Engineer)." },
+    { keywords: ["design", "designer", "ui", "ux"], reply: "The **Design** team has 2 members: Elijah Wood (Senior UI/UX Designer) and James McAvoy (Product Designer)." },
+    { keywords: ["marketing"], reply: "The **Marketing** team has 3 members: Emma Watson (Marketing Coordinator), Sophia Loren (Growth Lead), and Isabella Rossellini (SEO Analyst)." },
+    { keywords: ["sales"], reply: "The **Sales** team has 2 members: Mia Farrow (Account Executive) and Charlotte Gainsbourg (Sales Specialist)." },
+    { keywords: ["finance", "accounting"], reply: "The **Finance** team has 2 members: Amelia Earhart (Senior Accountant) and Benjamin Franklin (Financial Analyst)." },
+    { keywords: ["hr", "human resource"], reply: "The **HR** team has 3 members plus Sarah Jenkins (Head of People Operations): Oliver Jackson (Recruiting Coordinator), Henry Cavill (HR Generalist — but he's currently listed under Engineering in our system)." },
+    { keywords: ["promotion", "due", "promote", "career"], reply: "Based on performance data, **Emma Watson** (Marketing Coordinator, rating 4.2) and **Benjamin Franklin** (Financial Analyst, rating 4.0) are top candidates for promotion this quarter." },
+    { keywords: ["summary", "dashboard", "overview", "snapshot"], reply: "Here's your company snapshot:\n• **18 employees** across 6 departments\n• **4 open job positions**\n• **12 candidates** in pipeline\n• **3 pending** leave requests\n• **2 trainings** overdue\n• **1 performance review** completed this quarter\n• Overall engagement score: **82%**" },
+    { keywords: ["leave", "time off", "vacation", "pto", "sick"], reply: "There are **3 pending leave requests**. Emma Watson has 5 days of Annual leave awaiting approval. 2 other requests are being reviewed by HR." },
+    { keywords: ["training", "course", "learn", "compliance"], reply: "**2 mandatory trainings** are overdue: 'SaaS Enterprise Compliance' and 'Information Security & Cybersecurity Awareness'. 12 employees have completed compliance training. 4 assignments are in progress." },
+    { keywords: ["salary", "pay", "compensation", "payroll"], reply: "The current payroll runs at **$295,000/month** across 18 employees. The highest earner is Robert Kovac (Engineering Director) at $165,000/year. Average salary is **$82,000/year**." },
+    { keywords: ["offer", "hiring", "candidate", "recruit"], reply: "We have **4 open positions**: Senior Fullstack Engineer (2 openings), Lead UI/UX Designer (1), HR Specialist (1 — on hold). **12 candidates** are in various stages: 1 SCREENING, 1 INTERVIEW, 1 OFFERED, 1 REJECTED." },
+    { keywords: ["performance", "review", "rating"], reply: "The most recent performance review was for **Emma Watson** — Q1 2026 rating: **4.2/5**. AI suggests enrolling in Advanced Skill Training and encouraging cross-departmental collaboration." },
+    { keywords: ["onboard", "new hire", "joining"], reply: "The latest onboarding was **Michael Chen**, onboarded as Senior Developer in Engineering via the AI Workflow. The autonomous 10-step process completed successfully including ID generation, email provisioning, department assignment, and training enrollment." },
+    { keywords: ["hello", "hi ", "hey", "good morning", "good evening"], reply: "Hello! I'm your AI HR assistant. I can help with employee info, department stats, performance insights, payroll, and more. Try asking something like 'How many employees?' or 'Who's due for promotion?'" },
+    { keywords: ["help", "what can you", "capabilities", "what do you"], reply: "I can answer questions about:\n• **Employees** — headcount, department teams, roles\n• **Recruitment** — candidates, offers, job openings\n• **Performance** — reviews, ratings, promotions\n• **Operations** — leave, training, payroll\n• **AI Workflow** — onboarding, promotions\n\nTry one of the suggested questions!" },
+    { keywords: ["who is", "tell me about", "find"], reply: "I can look up employees by name. Try asking 'Who is Emma Watson?' or 'Tell me about Robert Kovac'." },
+    { keywords: ["thank", "thanks", "appreciate"], reply: "You're welcome! Happy to help. Feel free to ask anything else about your HR data." },
+  ], []);
+
   const handleSend = async (text: string) => {
     if (!text.trim() || loading) return;
     setShowSuggestions(false);
@@ -42,25 +66,72 @@ export default function AIAssistant() {
     setInput("");
     setLoading(true);
 
-    // Simulate AI delay
-    await new Promise((r) => setTimeout(r, 600 + Math.random() * 600));
+    await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
 
-    const q = text.toLowerCase();
+    const q = text.toLowerCase().trim();
+
+    // Try fetching real employee data for "who is X" queries
+    const whoMatch = q.match(/who (?:is|are)\s+(.+)/);
+    if (whoMatch) {
+      try {
+        const res = await fetch(`/api/employees?search=${encodeURIComponent(whoMatch[1])}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            const emp = data[0];
+            setMessages((prev) => [...prev, { role: "assistant", text: `**${emp.name}** (${emp.employeeId}) — ${emp.position} in ${emp.department}. Salary: $${emp.salary?.toLocaleString() || 'N/A'}. Status: ${emp.status || 'Active'}.` }]);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // Try fetching employee search results for "find X"
+    const findMatch = q.match(/find\s+(.+)/);
+    if (findMatch) {
+      try {
+        const res = await fetch(`/api/employees?search=${encodeURIComponent(findMatch[1])}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            const names = data.map((e: any) => `**${e.name}** (${e.position})`).join(", ");
+            setMessages((prev) => [...prev, { role: "assistant", text: `Found ${data.length} match(es): ${names}` }]);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // Check patterns for matching job titles or employee names
+    const nameCheck = q.match(/(?:about|is|does|do)\s+([a-z]+ [a-z]+)/);
+    if (nameCheck) {
+      try {
+        const res = await fetch(`/api/employees?search=${encodeURIComponent(nameCheck[1])}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            const emp = data[0];
+            setMessages((prev) => [...prev, { role: "assistant", text: `**${emp.name}** (${emp.employeeId}) — ${emp.position} in ${emp.department}. Salary: $${emp.salary?.toLocaleString() || 'N/A'}.` }]);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // Match against keyword patterns
     let answer = "";
-    if (q.includes("employee") && (q.includes("how many") || q.includes("count"))) {
-      answer = "We have **18 active employees** across 6 departments: Engineering, Design, Marketing, Sales, HR, and Finance.";
-    } else if (q.includes("engineering")) {
-      answer = "The **Engineering** team has 4 members: Robert Kovac (Director), Liam Neeson, Noah Centineo, and Oliver Jackson.";
-    } else if (q.includes("promotion") || q.includes("due")) {
-      answer = "Based on performance data, **Emma Watson** (Marketing Coordinator) and **Benjamin Franklin** (Financial Analyst) are top candidates for promotion this quarter.";
-    } else if (q.includes("summary") || q.includes("dashboard")) {
-      answer = "Here's your snapshot: **18 employees**, **4 open jobs**, **12 candidates** in pipeline, **3 pending leaves**, and **2 trainings** overdue. Overall engagement score: **82%**.";
-    } else if (q.includes("leave")) {
-      answer = "There are **3 pending leave requests**. Emma Watson has 5 days of Annual leave awaiting approval.";
-    } else if (q.includes("training")) {
-      answer = "**2 trainings** are overdue. 12 employees have completed compliance training. 4 are in progress.";
-    } else {
-      answer = "I can help with employee info, department stats, performance insights, and more. Try one of the suggested questions above!";
+    for (const r of responses) {
+      if (r.keywords.some((k) => q.includes(k))) {
+        answer = r.reply;
+        break;
+      }
+    }
+
+    if (!answer) {
+      answer = "I'm not sure about that specific query. I can help with employee info, departments, recruitment, payroll, leave, training, promotions, and performance. Try one of the suggested questions above, or ask 'Who is Emma Watson?'";
     }
     setMessages((prev) => [...prev, { role: "assistant", text: answer }]);
     setLoading(false);
