@@ -23,6 +23,7 @@ import {
   GraduationCap,
   FileText,
   UserPlus,
+  ArrowLeftRight,
   type LucideIcon,
 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
@@ -35,6 +36,7 @@ interface HeaderProps {
   userAvatar?: string;
   onLogout?: () => void;
   onMenuToggle?: () => void;
+  onSwitchRole?: (role: string) => void;
 }
 
 interface SearchResult {
@@ -81,6 +83,7 @@ export default function Header({
   userAvatar,
   onLogout,
   onMenuToggle,
+  onSwitchRole,
 }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -505,6 +508,20 @@ export default function Header({
                 >
                   <DropdownItem icon={User} label="Profile" />
                   <DropdownItem icon={Settings} label="Settings" />
+                  <div className="my-1.5 border-t border-slate-100 dark:border-slate-700/50" />
+                  <div className="px-4 py-1.5">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Switch Role</p>
+                    {["ADMIN", "HR", "MANAGER", "EMPLOYEE"].map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => onSwitchRole?.(role)}
+                        className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      >
+                        <ArrowLeftRight size={12} />
+                        {role.charAt(0) + role.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
                   <div className="my-1.5 border-t border-slate-100 dark:border-slate-700/50" />
                   <DropdownItem
                     icon={LogOut}
