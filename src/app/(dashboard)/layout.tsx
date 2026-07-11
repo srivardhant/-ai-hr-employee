@@ -84,7 +84,7 @@ export default function DashboardLayout({
     const updated = { ...user, role };
     localStorage.setItem("user", JSON.stringify(updated));
     setUser(updated);
-    router.push("/");
+    window.location.href = "/";
   };
 
   if (!mounted) {
