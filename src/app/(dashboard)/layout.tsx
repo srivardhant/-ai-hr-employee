@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import AIAssistant from "@/components/ai/AIAssistant";
 
 type Role = "HR" | "MANAGER" | "EMPLOYEE";
 
@@ -78,6 +79,14 @@ export default function DashboardLayout({
     router.push("/login");
   };
 
+  const handleSwitchRole = useCallback((role: string) => {
+    if (!user) return;
+    const updated = { ...user, role };
+    localStorage.setItem("user", JSON.stringify(updated));
+    setUser(updated);
+    router.push("/");
+  }, [user, router]);
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -137,12 +146,15 @@ export default function DashboardLayout({
           userRole={user?.role || "Administrator"}
           onLogout={handleLogout}
           onMenuToggle={() => setMobileOpen(true)}
+          onSwitchRole={handleSwitchRole}
         />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 mt-[72px] overflow-y-auto max-w-[1600px] w-full mx-auto animate-fade-in">
           {children}
         </main>
       </div>
+
+      <AIAssistant />
     </div>
   );
 }
