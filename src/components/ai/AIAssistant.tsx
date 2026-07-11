@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, X, Send, Loader2, Sparkles, User, Briefcase, DollarSign, Calendar, GraduationCap, Users, Star } from "lucide-react";
+import { Bot, X, Send, Loader2, Sparkles } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -10,18 +10,26 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  "How many employees do we have?",
-  "Show me employees in Engineering",
-  "Who's due for a promotion?",
-  "Summarize the dashboard",
+  "How many employees?",
+  "Show Engineering team",
+  "Who's due for promotion?",
+  "Dashboard summary",
   "Who is Emma Watson?",
-  "What about payroll?",
+  "Pending leave requests",
 ];
+
+async function fetchJson(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function fmt(n: number) { return n.toLocaleString(); }
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", text: "Hi! I'm your AI HR assistant. Ask me anything about your workforce." },
+    { role: "assistant", text: "Hi! I'm your AI HR assistant. Ask me anything — I'll look up the real data from your system." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,28 +45,6 @@ export default function AIAssistant() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const responses = useMemo(() => [
-    { keywords: ["how many", "count", "total", "headcount", "employees"], reply: "We have **18 active employees** across 6 departments: Engineering (4), Design (2), Marketing (3), Sales (2), HR (3), and Finance (2)." },
-    { keywords: ["engineering", "dev", "developer", "tech team"], reply: "The **Engineering** team has 4 members: Robert Kovac (Director), Liam Neeson (Staff Engineer), Noah Centineo (Software Engineer II), and Oliver Jackson (Frontend Engineer)." },
-    { keywords: ["design", "designer", "ui", "ux"], reply: "The **Design** team has 2 members: Elijah Wood (Senior UI/UX Designer) and James McAvoy (Product Designer)." },
-    { keywords: ["marketing"], reply: "The **Marketing** team has 3 members: Emma Watson (Marketing Coordinator), Sophia Loren (Growth Lead), and Isabella Rossellini (SEO Analyst)." },
-    { keywords: ["sales"], reply: "The **Sales** team has 2 members: Mia Farrow (Account Executive) and Charlotte Gainsbourg (Sales Specialist)." },
-    { keywords: ["finance", "accounting"], reply: "The **Finance** team has 2 members: Amelia Earhart (Senior Accountant) and Benjamin Franklin (Financial Analyst)." },
-    { keywords: ["hr", "human resource"], reply: "The **HR** team has 3 members plus Sarah Jenkins (Head of People Operations): Oliver Jackson (Recruiting Coordinator), Henry Cavill (HR Generalist — but he's currently listed under Engineering in our system)." },
-    { keywords: ["promotion", "due", "promote", "career"], reply: "Based on performance data, **Emma Watson** (Marketing Coordinator, rating 4.2) and **Benjamin Franklin** (Financial Analyst, rating 4.0) are top candidates for promotion this quarter." },
-    { keywords: ["summary", "dashboard", "overview", "snapshot"], reply: "Here's your company snapshot:\n• **18 employees** across 6 departments\n• **4 open job positions**\n• **12 candidates** in pipeline\n• **3 pending** leave requests\n• **2 trainings** overdue\n• **1 performance review** completed this quarter\n• Overall engagement score: **82%**" },
-    { keywords: ["leave", "time off", "vacation", "pto", "sick"], reply: "There are **3 pending leave requests**. Emma Watson has 5 days of Annual leave awaiting approval. 2 other requests are being reviewed by HR." },
-    { keywords: ["training", "course", "learn", "compliance"], reply: "**2 mandatory trainings** are overdue: 'SaaS Enterprise Compliance' and 'Information Security & Cybersecurity Awareness'. 12 employees have completed compliance training. 4 assignments are in progress." },
-    { keywords: ["salary", "pay", "compensation", "payroll"], reply: "The current payroll runs at **$295,000/month** across 18 employees. The highest earner is Robert Kovac (Engineering Director) at $165,000/year. Average salary is **$82,000/year**." },
-    { keywords: ["offer", "hiring", "candidate", "recruit"], reply: "We have **4 open positions**: Senior Fullstack Engineer (2 openings), Lead UI/UX Designer (1), HR Specialist (1 — on hold). **12 candidates** are in various stages: 1 SCREENING, 1 INTERVIEW, 1 OFFERED, 1 REJECTED." },
-    { keywords: ["performance", "review", "rating"], reply: "The most recent performance review was for **Emma Watson** — Q1 2026 rating: **4.2/5**. AI suggests enrolling in Advanced Skill Training and encouraging cross-departmental collaboration." },
-    { keywords: ["onboard", "new hire", "joining"], reply: "The latest onboarding was **Michael Chen**, onboarded as Senior Developer in Engineering via the AI Workflow. The autonomous 10-step process completed successfully including ID generation, email provisioning, department assignment, and training enrollment." },
-    { keywords: ["hello", "hi ", "hey", "good morning", "good evening"], reply: "Hello! I'm your AI HR assistant. I can help with employee info, department stats, performance insights, payroll, and more. Try asking something like 'How many employees?' or 'Who's due for promotion?'" },
-    { keywords: ["help", "what can you", "capabilities", "what do you"], reply: "I can answer questions about:\n• **Employees** — headcount, department teams, roles\n• **Recruitment** — candidates, offers, job openings\n• **Performance** — reviews, ratings, promotions\n• **Operations** — leave, training, payroll\n• **AI Workflow** — onboarding, promotions\n\nTry one of the suggested questions!" },
-    { keywords: ["who is", "tell me about", "find"], reply: "I can look up employees by name. Try asking 'Who is Emma Watson?' or 'Tell me about Robert Kovac'." },
-    { keywords: ["thank", "thanks", "appreciate"], reply: "You're welcome! Happy to help. Feel free to ask anything else about your HR data." },
-  ], []);
-
   const handleSend = async (text: string) => {
     if (!text.trim() || loading) return;
     setShowSuggestions(false);
@@ -66,75 +52,138 @@ export default function AIAssistant() {
     setInput("");
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
-
     const q = text.toLowerCase().trim();
 
-    // Try fetching real employee data for "who is X" queries
-    const whoMatch = q.match(/who (?:is|are)\s+(.+)/);
-    if (whoMatch) {
-      try {
-        const res = await fetch(`/api/employees?search=${encodeURIComponent(whoMatch[1])}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.length > 0) {
-            const emp = data[0];
-            setMessages((prev) => [...prev, { role: "assistant", text: `**${emp.name}** (${emp.employeeId}) — ${emp.position} in ${emp.department}. Salary: $${emp.salary?.toLocaleString() || 'N/A'}. Status: ${emp.status || 'Active'}.` }]);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {}
-    }
+    try {
+      let answer = "";
 
-    // Try fetching employee search results for "find X"
-    const findMatch = q.match(/find\s+(.+)/);
-    if (findMatch) {
-      try {
-        const res = await fetch(`/api/employees?search=${encodeURIComponent(findMatch[1])}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.length > 0) {
-            const names = data.map((e: any) => `**${e.name}** (${e.position})`).join(", ");
-            setMessages((prev) => [...prev, { role: "assistant", text: `Found ${data.length} match(es): ${names}` }]);
-            setLoading(false);
-            return;
-          }
+      // Count employees
+      if (q.includes("how many") || (q.includes("employee") && (q.includes("count") || q.includes("total") || q.includes("many")))) {
+        const emps = await fetchJson("/api/employees");
+        if (emps && emps.length) {
+          answer = `We have **${emps.length} employees** total.`;
         }
-      } catch {}
-    }
-
-    // Check patterns for matching job titles or employee names
-    const nameCheck = q.match(/(?:about|is|does|do)\s+([a-z]+ [a-z]+)/);
-    if (nameCheck) {
-      try {
-        const res = await fetch(`/api/employees?search=${encodeURIComponent(nameCheck[1])}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.length > 0) {
-            const emp = data[0];
-            setMessages((prev) => [...prev, { role: "assistant", text: `**${emp.name}** (${emp.employeeId}) — ${emp.position} in ${emp.department}. Salary: $${emp.salary?.toLocaleString() || 'N/A'}.` }]);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {}
-    }
-
-    // Match against keyword patterns
-    let answer = "";
-    for (const r of responses) {
-      if (r.keywords.some((k) => q.includes(k))) {
-        answer = r.reply;
-        break;
       }
-    }
+      // Department lookup
+      else if (q.match(/(?:show|list|who|which|tell)\s+.*(?:in|team|department|dept)/)) {
+        const depts = ["engineering", "design", "marketing", "sales", "finance", "hr"];
+        const matched = depts.find((d) => q.includes(d));
+        if (matched) {
+          const emps = await fetchJson(`/api/employees?department=${matched.charAt(0).toUpperCase() + matched.slice(1)}`);
+          if (emps && emps.length) {
+            const lines = emps.map((e: any) => `• **${e.name}** — ${e.position}`).join("\n");
+            answer = `**${matched.charAt(0).toUpperCase() + matched.slice(1)}** team (${emps.length}):\n${lines}`;
+          }
+        }
+        if (!answer) answer = "Which department? Try: Engineering, Design, Marketing, Sales, Finance, or HR.";
+      }
+      // Who is X?
+      else if (q.match(/who(?:'s| is)\s+(.+)/)) {
+        const name = q.match(/who(?:'s| is)\s+(.+)/)?.[1]?.trim();
+        if (name) {
+          const emps = await fetchJson(`/api/employees?search=${encodeURIComponent(name)}`);
+          if (emps && emps.length) {
+            const e = emps[0];
+            answer = `**${e.name}** (${e.employeeId})\n• Role: ${e.position}\n• Department: ${e.department}\n• Salary: $${fmt(e.salary || 0)}\n• Status: ${e.status || "Active"}`;
+          } else {
+            answer = `I couldn't find anyone matching "${name}" in the employee records.`;
+          }
+        }
+      }
+      // Leaves
+      else if (q.includes("leave") || q.includes("time off") || q.includes("vacation") || q.includes("pto")) {
+        const leaves = await fetchJson("/api/leave");
+        if (leaves && leaves.length) {
+          const pending = leaves.filter((l: any) => l.status === "PENDING");
+          const approved = leaves.filter((l: any) => l.status === "APPROVED");
+          answer = `Found **${leaves.length} leave records** (${pending.length} pending, ${approved.length} approved).`;
+          if (pending.length) {
+            answer += `\nPending:\n${pending.slice(0, 3).map((l: any) => `• ${l.employee?.name || "Someone"} — ${l.days}d ${l.type} (${l.status})`).join("\n")}`;
+          }
+        } else {
+          answer = "No leave records found.";
+        }
+      }
+      // Payroll
+      else if (q.includes("payroll") || q.includes("salary") || q.includes("pay")) {
+        const payrolls = await fetchJson("/api/payroll");
+        if (payrolls && payrolls.length) {
+          const total = payrolls.reduce((s: number, p: any) => s + (p.netPay || 0), 0);
+          const months = [...new Set(payrolls.map((p: any) => `${p.month}/${p.year}`))];
+          answer = `**${payrolls.length} payroll records** across ${months.length} month(s). Total net pay: **$${fmt(total)}**.`;
+        } else {
+          answer = "No payroll records found.";
+        }
+      }
+      // Promotions
+      else if (q.includes("promotion") || q.includes("promote") || q.includes("career")) {
+        const promos = await fetchJson("/api/promotions");
+        if (promos && promos.length) {
+          answer = `**${promos.length} promotion record(s)** found.\n${promos.slice(0, 3).map((p: any) => `• ${p.employee?.name || "Someone"}: ${p.fromPosition || "?"} → ${p.toPosition} ($${fmt(p.fromSalary)} → $${fmt(p.toSalary)})`).join("\n")}`;
+        } else {
+          answer = "No promotion records yet.";
+        }
+      }
+      // Training
+      else if (q.includes("training") || q.includes("course") || q.includes("compliance")) {
+        const trainings = await fetchJson("/api/training");
+        if (trainings && trainings.length) {
+          const overdue = trainings.filter((t: any) => t.status === "OVERDUE" || t.status === "ASSIGNED");
+          answer = `**${trainings.length} training assignments** (${overdue.length} pending/overdue).`;
+        } else {
+          answer = "No training records found.";
+        }
+      }
+      // Recruitment / candidates
+      else if (q.includes("candidate") || q.includes("recruit") || q.includes("job") || q.includes("hiring") || q.includes("offer")) {
+        const cands = await fetchJson("/api/candidates");
+        if (cands && cands.length) {
+          const byStatus: Record<string, number> = {};
+          for (const c of cands) byStatus[c.status] = (byStatus[c.status] || 0) + 1;
+          const summary = Object.entries(byStatus).map(([k, v]) => `${k}: ${v}`).join(", ");
+          answer = `**${cands.length} candidates** in pipeline (${summary}).`;
+        } else {
+          answer = "No candidates found.";
+        }
+      }
+      // Performance
+      else if (q.includes("performance") || q.includes("review")) {
+        const evals = await fetchJson("/api/performance");
+        if (evals && evals.length) {
+          const avg = evals.reduce((s: number, e: any) => s + (e.rating || 0), 0) / evals.length;
+          answer = `**${evals.length} performance review(s)**. Average rating: **${avg.toFixed(1)}/5**.`;
+        } else {
+          answer = "No performance reviews yet.";
+        }
+      }
+      // Dashboard summary
+      else if (q.includes("summary") || q.includes("dashboard") || q.includes("overview")) {
+        const [emps, cands, leaves, payrolls, promos] = await Promise.all([
+          fetchJson("/api/employees"),
+          fetchJson("/api/candidates"),
+          fetchJson("/api/leave"),
+          fetchJson("/api/payroll"),
+          fetchJson("/api/promotions"),
+        ]);
+        const empCount = emps?.length || 0;
+        const candCount = cands?.length || 0;
+        const leaveCount = leaves?.filter((l: any) => l.status === "PENDING").length || 0;
+        const payrollTotal = payrolls?.reduce((s: number, p: any) => s + (p.netPay || 0), 0) || 0;
+        const promoCount = promos?.length || 0;
+        answer = `**Company Snapshot**\n• Employees: **${empCount}**\n• Candidates: **${candCount}**\n• Pending leaves: **${leaveCount}**\n• Payroll total: **$${fmt(payrollTotal)}**\n• Promotions: **${promoCount}**`;
+      }
+      // Fallback
+      else {
+        answer = "I can look up **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance**. Try asking something like 'How many employees?' or 'Show Engineering team'.";
+      }
 
-    if (!answer) {
-      answer = "I'm not sure about that specific query. I can help with employee info, departments, recruitment, payroll, leave, training, promotions, and performance. Try one of the suggested questions above, or ask 'Who is Emma Watson?'";
+      if (!answer) answer = "I couldn't find anything for that query. Try rephrasing.";
+      setMessages((prev) => [...prev, { role: "assistant", text: answer }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, I hit an error looking that up. Try again." }]);
+    } finally {
+      setLoading(false);
     }
-    setMessages((prev) => [...prev, { role: "assistant", text: answer }]);
-    setLoading(false);
   };
 
   return (
