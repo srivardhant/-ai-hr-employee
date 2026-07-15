@@ -11,6 +11,7 @@ import {
   Users, UserCheck, UserPlus, Briefcase, Calendar, AlertCircle, Clock, DollarSign, Star, Heart, Sparkles,
   GraduationCap, FileCheck, Award, Target, BookOpen, ChevronRight, BadgeCheck,
 } from "lucide-react";
+import AIInsights from "@/components/dashboard/AIInsights";
 import toast from "react-hot-toast";
 
 type UserInfo = { email: string; role: string; name: string };
@@ -99,6 +100,7 @@ function HRDashboard({ data, notifications, onMarkAllRead }: any) {
         <StatCard title="Pending Leaves" value={s.pendingLeaves} icon={Clock} color="from-rose-500 to-pink-500" />
         <StatCard title="Engagement Score" value={s.employeeEngagementScore} suffix="/5" icon={Heart} color="from-pink-500 to-rose-600" />
       </div>
+      <AIInsights role="HR" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BarChartWidget title="Candidates by Status" data={data?.candidateChart || []} />
         <BarChartWidget title="Training Completion Status" data={data?.trainingChart || []} />
@@ -127,6 +129,7 @@ function ManagerDashboard({ data }: any) {
         <StatCard title="Performance Reviews Due" value={s.reviewsDue} icon={Star} color="from-violet-500 to-purple-600" />
         <StatCard title="Trainings In Progress" value={s.teamTrainingsDue} icon={BookOpen} color="from-sky-500 to-blue-600" />
       </div>
+      <AIInsights role="MANAGER" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartWidget title="Team Payroll Expenditure" data={data?.payrollData || []} />
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20 dark:border-slate-700/50">
