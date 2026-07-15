@@ -168,7 +168,7 @@ export default function TrainingPage() {
       const res = await fetch("/api/training", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignmentId, progress: nextProgress }),
+        body: JSON.stringify({ assignmentId, progress: nextProgress, role }),
       });
 
       if (res.ok) {
@@ -322,14 +322,21 @@ export default function TrainingPage() {
                         
                         <div className="flex items-center gap-2 mt-1">
                           {assign.status !== "COMPLETED" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              icon={<PlayCircle className="w-4.5 h-4.5" />}
-                              onClick={() => handleSimulateProgress(assign.id, assign.progress)}
-                            >
-                              Study Course
-                            </Button>
+                            isEmployee ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                icon={<PlayCircle className="w-4.5 h-4.5" />}
+                                onClick={() => handleSimulateProgress(assign.id, assign.progress)}
+                              >
+                                Study Course
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                <BookOpen className="w-3.5 h-3.5" />
+                                View Only
+                              </span>
+                            )
                           ) : (
                             <Button
                               variant="secondary"

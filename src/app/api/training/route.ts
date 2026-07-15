@@ -82,7 +82,10 @@ export async function POST(request: Request) {
 // PUT to update progress of training assignment (e.g. simulation)
 export async function PUT(request: Request) {
   try {
-    const { assignmentId, progress } = await request.json();
+    const { assignmentId, progress, role } = await request.json();
+    if (role !== "EMPLOYEE") {
+      return NextResponse.json({ error: "Only employees can complete training courses" }, { status: 403 });
+    }
 
     if (!assignmentId || progress === undefined) {
       return NextResponse.json({ error: "Assignment ID and progress required" }, { status: 400 });
