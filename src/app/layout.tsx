@@ -24,6 +24,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                var theme = localStorage.getItem('theme');
+                var resolved = 'light';
+                if (theme === 'dark') resolved = 'dark';
+                else if (theme === 'system') resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                else if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) resolved = 'dark';
+                if (resolved === 'dark') document.documentElement.classList.add('dark');
+              } catch(e) {}
+            })();
+          `}}
+        />
+      </head>
       <body className="antialiased">
         <ThemeProvider>
           {children}
