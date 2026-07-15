@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import AIAssistant from "@/components/ai/AIAssistant";
+import PageTransition from "@/components/ui/PageTransition";
 
 type Role = "HR" | "MANAGER" | "EMPLOYEE";
 
@@ -140,8 +141,10 @@ export default function DashboardLayout({
           onMenuToggle={() => setMobileOpen(true)}
         />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 mt-[72px] overflow-y-auto max-w-[1600px] w-full mx-auto animate-fade-in">
-          {children}
+        <main className="flex-1 p-4 md:p-6 lg:p-8 mt-[72px] overflow-y-auto max-w-[1600px] w-full mx-auto">
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
       </div>
 
