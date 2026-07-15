@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/Tabs";
-import { Briefcase, UserPlus, Clipboard, Sparkles, Plus, AlertCircle, Cpu } from "lucide-react";
+import { Briefcase, UserPlus, Clipboard, Sparkles, Plus, AlertCircle, Cpu, Upload, FileText, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function RecruitmentPage() {
@@ -47,6 +47,8 @@ export default function RecruitmentPage() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [resumeText, setResumeText] = useState("");
+  const [parsing, setParsing] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -66,6 +68,36 @@ export default function RecruitmentPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleParseResume = async () => {
+    if (!resumeText.trim() || resumeText.length < 20) {
+      toast.error("Please paste a complete resume (at least 20 characters)");
+      return;
+    }
+    setParsing(true);
+    try {
+      const res = await fetch("/api/parse-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: resumeText }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCandidateForm(prev => ({
+        ...prev,
+        name: data.name || prev.name,
+        email: data.email || prev.email,
+        phone: data.phone || prev.phone,
+        experience: data.experience || prev.experience,
+        skills: data.skills || prev.skills,
+      }));
+      toast.success("Resume parsed! Fields auto-filled.", { icon: "🤖" });
+    } catch {
+      toast.error("Failed to parse resume. Fill fields manually.");
+    } finally {
+      setParsing(false);
+    }
+  };
 
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +319,30 @@ export default function RecruitmentPage() {
         title="Add Candidate & AI Screening Vetting"
       >
         <form onSubmit={handleAddCandidate} className="space-y-4">
+          {/* AI Resume Parser */}
+          <div className="bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-200/20 dark:border-indigo-800/20 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-indigo-500" />
+              <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">AI Resume Parser</span>
+            </div>
+            <Textarea
+              label="Paste Resume / CV Text"
+              placeholder="Paste the candidate's resume text here... The AI will extract name, email, skills, and experience automatically."
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              rows={4}
+            />
+            <button
+              type="button"
+              onClick={handleParseResume}
+              disabled={parsing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50"
+            >
+              {parsing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {parsing ? "Parsing..." : "Parse Resume (AI)"}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Full Name"
