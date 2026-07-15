@@ -66,17 +66,20 @@ export default function InboxPage() {
 
   const filtered = filter === "unread" ? notifications.filter(n => !n.read) : notifications;
 
+  const allActive = filter === "all";
+  const unreadActive = filter === "unread";
+
   return (
     <div className="space-y-6">
       <PageHeader title="Smart Inbox" description="System notifications, approvals, and workflow alerts"
         action={
           <div className="flex items-center gap-2">
-            <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === "all" ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}>All</button>
-            <button onClick={() => setFilter("unread")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === "unread" ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}>Unread</button>
+            <button onClick={() => setFilter("all")} className={"px-3 py-1.5 rounded-lg text-xs font-semibold transition-all " + (allActive ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300")}>All</button>
+            <button onClick={() => setFilter("unread")} className={"px-3 py-1.5 rounded-lg text-xs font-semibold transition-all " + (unreadActive ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300")}>Unread</button>
             <button onClick={markAllRead} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all">Mark All Read</button>
           </div>
-        </div>
-      </PageHeader>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">

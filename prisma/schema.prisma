@@ -1,14 +1,16 @@
 // Prisma Schema for AI HR Employee Platform
-// Database: SQLite (local) / PostgreSQL (Vercel)
+// Database: PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
 
 // ============================================
 // ENUMS (using String for compatibility)
