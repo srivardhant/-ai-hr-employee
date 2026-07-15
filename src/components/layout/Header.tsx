@@ -96,6 +96,7 @@ export default function Header({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -174,6 +175,22 @@ export default function Header({
     return () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); };
   }, [searchQuery]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+        e.preventDefault();
+        document.querySelector('[data-shortcut="new"]')?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllRead = async () => {
@@ -245,8 +262,9 @@ export default function Header({
             }`}
           />
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Search employees, tasks, documents..."
+            placeholder='Search employees... (Ctrl+K)'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => {

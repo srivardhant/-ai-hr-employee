@@ -112,7 +112,7 @@ export default function EmployeesPage() {
         action={
           <div className="flex items-center gap-2">
             {!isEmployee && (
-              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setIsModalOpen(true)}>
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setIsModalOpen(true)} data-shortcut="new">
                 Add Employee Profile
               </Button>
             )}
