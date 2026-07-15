@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 import { CreditCard, FileDown, Plus, DollarSign, Check } from "lucide-react";
+import { downloadCSV } from "@/lib/csv";
 import toast from "react-hot-toast";
 
 export default function PayrollPage() {
@@ -250,15 +251,24 @@ export default function PayrollPage() {
         title="Compensation & Payroll"
         description="Verify monthly salaries, issue bonuses, calculate deductions, route payouts, and export payslips."
         action={
-          !isEmployee && (
-            <Button
-              variant="primary"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Process Monthly Payroll
+          <div className="flex items-center gap-2">
+            {!isEmployee && (
+              <Button
+                variant="primary"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={() => setIsModalOpen(true)}
+              >
+                Process Monthly Payroll
+              </Button>
+            )}
+            <Button variant="secondary" icon={<FileDown className="w-4 h-4" />}
+              onClick={() => downloadCSV(payrolls.map((p: any) => ({
+                Employee: p.employee?.name, Month: p.month, "Basic Pay": p.basicSalary,
+                Allowances: p.allowances, Deductions: p.deductions, "Net Pay": p.netPay, Status: p.status,
+              })), "payroll")}>
+              Export CSV
             </Button>
-          )
+          </div>
         }
       />
 

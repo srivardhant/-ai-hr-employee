@@ -7,7 +7,8 @@ import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
+import { downloadCSV } from "@/lib/csv";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
@@ -104,15 +105,24 @@ export default function EmployeesPage() {
         title="Employee Roster & Directory"
         description="Verify active staff records, modify roles, manage reporting hierarchies, and check departments."
         action={
-          !isEmployee && (
-            <Button
-              variant="primary"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Add Employee Profile
+          <div className="flex items-center gap-2">
+            {!isEmployee && (
+              <Button
+                variant="primary"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={() => setIsModalOpen(true)}
+              >
+                Add Employee Profile
+              </Button>
+            )}
+            <Button variant="secondary" icon={<Download className="w-4 h-4" />}
+              onClick={() => downloadCSV(employees.map((e: any) => ({
+                Name: e.name, Email: e.email, Department: e.department, Position: e.position,
+                Status: e.status, Phone: e.phone,
+              })), "employees")}>
+              Export CSV
             </Button>
-          )
+          </div>
         }
       />
 
