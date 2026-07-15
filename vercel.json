@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npx prisma generate && npx prisma db push && npx prisma db seed && next build --webpack",
+  "installCommand": "npm install"
+}
