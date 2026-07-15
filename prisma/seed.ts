@@ -84,6 +84,7 @@ async function main() {
       email: "sarah.jenkins@aihr.com",
       companyEmail: "sarah.jenkins@aihr.com",
       phone: "+1 (555) 019-2831",
+      gender: "Female",
       department: "HR",
       position: "Head of People Operations",
       salary: 115000,
@@ -99,6 +100,7 @@ async function main() {
       email: "robert.kovac@aihr.com",
       companyEmail: "robert.kovac@aihr.com",
       phone: "+1 (555) 012-3456",
+      gender: "Male",
       department: "Engineering",
       position: "Engineering Director",
       salary: 165000,
@@ -114,6 +116,7 @@ async function main() {
       email: "emma.watson@aihr.com",
       companyEmail: "emma.watson@aihr.com",
       phone: "+1 (555) 014-9876",
+      gender: "Female",
       department: "Marketing",
       position: "Marketing Coordinator",
       salary: 68000,
@@ -170,6 +173,7 @@ async function main() {
       },
     });
 
+    const genders = ["Male", "Female", "Other"];
     const emp = await prisma.employee.create({
       data: {
         userId: user.id,
@@ -178,6 +182,7 @@ async function main() {
         email: companyEmail,
         companyEmail,
         phone: `+1 (555) 018-${String(2000 + i * 27)}`,
+        gender: genders[i % genders.length],
         department: dept,
         position: pos,
         salary,

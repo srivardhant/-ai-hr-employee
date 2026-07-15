@@ -30,6 +30,7 @@ const ROLE_ACCESS: Record<string, Role[]> = {
   "/inbox": ["HR", "MANAGER", "EMPLOYEE"],
   "/org-chart": ["HR", "MANAGER", "EMPLOYEE"],
   "/settings": ["HR", "MANAGER", "EMPLOYEE"],
+  "/profile": ["HR", "MANAGER", "EMPLOYEE"],
 };
 
 export default function DashboardLayout({
