@@ -541,8 +541,8 @@ export default function Header({
                     py-1.5 z-50
                   "
                 >
-                  <DropdownItem icon={User} label="Profile" />
-                  <DropdownItem icon={Settings} label="Settings" />
+                  <DropdownItem icon={User} label="Profile" onClick={() => window.location.href = '/employees'} />
+                  <DropdownItem icon={Settings} label="Settings" onClick={() => window.location.href = '/settings'} />
                   <div className="my-1.5 border-t border-slate-100 dark:border-slate-700/50" />
                   <div className="px-4 py-2">
                     <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Quick Stats</p>
