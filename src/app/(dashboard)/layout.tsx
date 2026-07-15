@@ -27,6 +27,7 @@ const ROLE_ACCESS: Record<string, Role[]> = {
   "/exit": ["HR"],
   "/employees": ["HR", "MANAGER", "EMPLOYEE"],
   "/workflow": ["HR"],
+  "/inbox": ["HR", "MANAGER", "EMPLOYEE"],
 };
 
 export default function DashboardLayout({

@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Mail,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -46,6 +47,7 @@ const ROLE_ACCESS: Record<string, Role[]> = {
   '/exit': ['HR'],
   '/employees': ['HR', 'MANAGER', 'EMPLOYEE'],
   '/workflow': ['HR'],
+  '/inbox': ['HR', 'MANAGER', 'EMPLOYEE'],
 };
 
 function hasAccess(path: string, role: Role): boolean {
@@ -71,6 +73,7 @@ const allNavSections: NavSection[] = [
     title: 'MAIN',
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { label: 'Inbox', href: '/inbox', icon: Mail },
     ],
   },
   {
