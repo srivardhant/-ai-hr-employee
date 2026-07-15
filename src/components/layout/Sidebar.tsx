@@ -48,6 +48,7 @@ const ROLE_ACCESS: Record<string, Role[]> = {
   '/employees': ['HR', 'MANAGER', 'EMPLOYEE'],
   '/workflow': ['HR'],
   '/inbox': ['HR', 'MANAGER', 'EMPLOYEE'],
+  '/org-chart': ['HR', 'MANAGER', 'EMPLOYEE'],
 };
 
 function hasAccess(path: string, role: Role): boolean {
@@ -74,6 +75,7 @@ const allNavSections: NavSection[] = [
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
       { label: 'Inbox', href: '/inbox', icon: Mail },
+      { label: 'Org Chart', href: '/org-chart', icon: Users },
     ],
   },
   {

@@ -28,6 +28,7 @@ const ROLE_ACCESS: Record<string, Role[]> = {
   "/employees": ["HR", "MANAGER", "EMPLOYEE"],
   "/workflow": ["HR"],
   "/inbox": ["HR", "MANAGER", "EMPLOYEE"],
+  "/org-chart": ["HR", "MANAGER", "EMPLOYEE"],
 };
 
 export default function DashboardLayout({
