@@ -12,6 +12,7 @@ import {
   GraduationCap, FileCheck, Award, Target, BookOpen, ChevronRight, BadgeCheck,
 } from "lucide-react";
 import AIInsights from "@/components/dashboard/AIInsights";
+import DemoTour from "@/components/demo/DemoTour";
 import toast from "react-hot-toast";
 
 type UserInfo = { email: string; role: string; name: string };
@@ -87,7 +88,7 @@ function HRDashboard({ data, notifications, onMarkAllRead }: any) {
   return (
     <>
       <PageHeader title="HR Operations Dashboard" description="Recruitment pipeline, employee lifecycle, and HR analytics."
-        action={<div className="flex items-center gap-2 text-xs font-semibold text-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-1.5 rounded-xl border border-cyan-200/30 dark:border-cyan-800/30"><Users className="w-3.5 h-3.5" />HR Operations</div>}
+        action={<div className="flex items-center gap-2"><DemoTour /><span className="flex items-center gap-2 text-xs font-semibold text-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-1.5 rounded-xl border border-cyan-200/30 dark:border-cyan-800/30"><Users className="w-3.5 h-3.5" />HR Operations</span></div>}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard title="Active Employees" value={s.totalEmployees} icon={UserCheck} color="from-emerald-500 to-teal-600" />
@@ -121,7 +122,7 @@ function ManagerDashboard({ data }: any) {
   return (
     <>
       <PageHeader title="Team Dashboard" description="Your direct reports, approvals, and team performance."
-        action={<div className="flex items-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 px-3 py-1.5 rounded-xl border border-emerald-200/30 dark:border-emerald-800/30"><Target className="w-3.5 h-3.5" />Team View</div>}
+        action={<div className="flex items-center gap-2"><DemoTour /><span className="flex items-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 px-3 py-1.5 rounded-xl border border-emerald-200/30 dark:border-emerald-800/30"><Target className="w-3.5 h-3.5" />Team View</span></div>}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Team Size" value={s.teamSize} icon={Users} color="from-emerald-500 to-teal-600" />
