@@ -6,7 +6,6 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { NotificationsPanel } from "@/components/dashboard/Notifications";
 import { BarChartWidget, LineChartWidget } from "@/components/dashboard/Charts";
-import { Spinner } from "@/components/ui/Spinner";
 import {
   Users, UserCheck, UserPlus, Briefcase, Calendar, AlertCircle, Clock, DollarSign, Star, Heart, Sparkles,
   GraduationCap, FileCheck, Award, Target, BookOpen, ChevronRight, BadgeCheck,
@@ -60,10 +59,18 @@ export default function RoleDashboard() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[70vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner size="lg" />
-          <span className="text-sm text-slate-500 font-semibold tracking-wider uppercase animate-pulse">Loading Dashboard...</span>
+      <div className="space-y-6">
+        <div className="h-8 w-64 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+        <div className="h-4 w-96 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[1,2,3,4,5,6,7,8,9].map(i => (
+            <div key={i} className="h-28 bg-slate-100 dark:bg-slate-800/50 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1,2].map(i => (
+            <div key={i} className="h-64 bg-slate-100 dark:bg-slate-800/50 rounded-2xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
