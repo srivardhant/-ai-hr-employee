@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     if (employeeId) {
       const assignments = await prisma.trainingAssignment.findMany({
         where: { employeeId },
-        include: { training: true },
+        include: { training: true, employee: true },
       });
       return NextResponse.json(assignments);
     }
