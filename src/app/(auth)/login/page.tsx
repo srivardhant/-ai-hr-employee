@@ -1,16 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Brain,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Sparkles,
-  ArrowRight,
-  Loader2,
+  Brain, Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, Loader2, User, Phone, Users as UsersIcon, X, Key
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -21,6 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [signUpForm, setSignUpForm] = useState({ name: "", email: "", password: "", phone: "", department: "", gender: "", position: "" });
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPassword, setForgotPassword] = useState("");
+  const [showForgotPw, setShowForgotPw] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -43,6 +43,59 @@ export default function LoginPage() {
       router.push("/");
     } catch {
       toast.error("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signUpForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Account created! Your ID: ${data.employeeId}`);
+        setShowSignUp(false);
+        setEmail(signUpForm.email);
+        setPassword(signUpForm.password);
+        setSignUpForm({ name: "", email: "", password: "", phone: "", department: "", gender: "", position: "" });
+      } else {
+        toast.error(data.error || "Sign up failed");
+      }
+    } catch {
+      toast.error("Sign up failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail, newPassword: forgotPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Password reset successfully! You can now sign in.");
+        setShowForgotPassword(false);
+        setEmail(forgotEmail);
+        setPassword(forgotPassword);
+        setForgotEmail("");
+        setForgotPassword("");
+      } else {
+        toast.error(data.error || "Password reset failed");
+      }
+    } catch {
+      toast.error("Password reset failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +244,9 @@ export default function LoginPage() {
                 <input type="checkbox" defaultChecked className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-indigo-500 focus:ring-indigo-500/50" />
                 Remember me
               </label>
-              <span></span>
+              <button type="button" onClick={() => setShowForgotPassword(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                Forgot password?
+              </button>
             </div>
 
             <motion.button
@@ -217,6 +272,14 @@ export default function LoginPage() {
             </motion.button>
           </motion.form>
 
+          <div className="px-8 pb-8 text-center">
+            <p className="text-xs text-slate-500">
+              Don&apos;t have an account?{" "}
+              <button type="button" onClick={() => setShowSignUp(true)} className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                Sign up
+              </button>
+            </p>
+          </div>
         </div>
 
         <motion.p
@@ -228,6 +291,107 @@ export default function LoginPage() {
           Powered by Autonomous AI Workflow Engine
         </motion.p>
       </motion.div>
+
+      {/* Sign Up Modal */}
+      <AnimatePresence>
+        {showSignUp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowSignUp(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-white">Create Account</h2>
+                <button onClick={() => setShowSignUp(false)} className="text-slate-500 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleSignUp} className="space-y-3">
+                <input type="text" placeholder="Full Name" required value={signUpForm.name} onChange={(e) => setSignUpForm({ ...signUpForm, name: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                <input type="email" placeholder="Email" required value={signUpForm.email} onChange={(e) => setSignUpForm({ ...signUpForm, email: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                <input type="password" placeholder="Password" required value={signUpForm.password} onChange={(e) => setSignUpForm({ ...signUpForm, password: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" placeholder="Phone" value={signUpForm.phone} onChange={(e) => setSignUpForm({ ...signUpForm, phone: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                  <select value={signUpForm.gender} onChange={(e) => setSignUpForm({ ...signUpForm, gender: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                    <option value="" className="text-slate-600">Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" placeholder="Department" value={signUpForm.department} onChange={(e) => setSignUpForm({ ...signUpForm, department: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                  <input type="text" placeholder="Position" value={signUpForm.position} onChange={(e) => setSignUpForm({ ...signUpForm, position: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                </div>
+                <button type="submit" disabled={isLoading}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50">
+                  {isLoading ? "Creating..." : "Create Account"}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowForgotPassword(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-white">Reset Password</h2>
+                <button onClick={() => setShowForgotPassword(false)} className="text-slate-500 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <input type="email" placeholder="Email address" required value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                <div className="relative">
+                  <input type={showForgotPw ? "text" : "password"} placeholder="New password" required value={forgotPassword} onChange={(e) => setForgotPassword(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 pr-10" />
+                  <button type="button" onClick={() => setShowForgotPw(!showForgotPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                    {showForgotPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button type="submit" disabled={isLoading}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50">
+                  {isLoading ? "Resetting..." : "Reset Password"}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
