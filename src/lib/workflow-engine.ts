@@ -6,6 +6,8 @@ import {
 } from "@/lib/utils";
 import { parseWorkflowWithAI } from "@/lib/ai";
 
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 export interface WorkflowStep {
   id: string;
   name: string;
@@ -80,11 +82,19 @@ export async function parseWorkflowInput(input: string) {
   }
 
   if (normalized.includes("leave") || normalized.includes("time off")) {
-    return { type: "LEAVE" as const, data: { input } };
+    const nameMatch = input.match(/(?:for|of|employee)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    const name = nameMatch?.[1]?.trim() || "";
+    const typeMatch = input.match(/(sick|annual|casual|maternity|paternity|bereavement|unpaid)\s+leave/i);
+    const leaveType = typeMatch?.[1]?.toUpperCase() || "ANNUAL";
+    const daysMatch = input.match(/(\d+)\s+days?/i);
+    const days = daysMatch?.[1] ? parseInt(daysMatch[1]) : 3;
+    return { type: "LEAVE" as const, data: { name, leaveType, days, input } };
   }
 
-  if (normalized.includes("payroll") || normalized.includes("run salaries")) {
-    return { type: "PAYROLL" as const, data: { input } };
+  if (normalized.includes("payroll") || normalized.includes("run salaries") || normalized.includes("generate payroll") || normalized.includes("process payroll")) {
+    const nameMatch = input.match(/(?:for|of|employee)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    const name = nameMatch?.[1]?.trim() || "";
+    return { type: "PAYROLL" as const, data: { name, input } };
   }
 
   return { type: "UNKNOWN" as const, data: {} };
@@ -775,6 +785,282 @@ export class WorkflowEngine {
     }
   }
 
+  static async runPayrollWorkflow(input: string, triggeredBy: string = "HR System") {
+    const parsed = await parseWorkflowInput(input);
+    const { name } = parsed.data as { name?: string; input?: string };
+
+    const steps: WorkflowStep[] = [
+      { id: "1", name: "Locate Employee", description: "Search employee records by name", status: "PENDING" },
+      { id: "2", name: "Calculate Salary", description: "Compute base salary, allowances, and deductions", status: "PENDING" },
+      { id: "3", name: "Generate Payroll Record", description: "Create payroll entry in the system", status: "PENDING" },
+      { id: "4", name: "Notify Employee", description: "Send payroll notification", status: "PENDING" },
+    ];
+
+    const log = await prisma.workflowLog.create({
+      data: {
+        workflowType: "PAYROLL",
+        input,
+        status: "RUNNING",
+        steps: JSON.stringify(steps),
+        triggeredBy,
+        startedAt: new Date(),
+      },
+    });
+
+    const updateStep = async (stepId: string, status: WorkflowStep["status"], result?: string) => {
+      const idx = steps.findIndex((s) => s.id === stepId);
+      if (idx !== -1) {
+        steps[idx].status = status;
+        steps[idx].result = result;
+        steps[idx].updatedAt = new Date().toISOString();
+        await prisma.workflowLog.update({
+          where: { id: log.id },
+          data: { steps: JSON.stringify(steps) },
+        });
+      }
+    };
+
+    try {
+      await updateStep("1", "RUNNING");
+      await sleep(800);
+
+      if (!name) {
+        await updateStep("1", "FAILED", "No employee name found in request.");
+        throw new Error("No employee name specified. Usage: Generate payroll for [employee name]");
+      }
+
+      const employee = await prisma.employee.findFirst({
+        where: { name: { contains: name, mode: "insensitive" }, status: "ACTIVE" },
+      });
+
+      if (!employee) {
+        await updateStep("1", "FAILED", `Employee "${name}" not found.`);
+        throw new Error(`Employee "${name}" not found.`);
+      }
+
+      await updateStep("1", "COMPLETED", `Found employee: ${employee.name} (${employee.employeeId})`);
+
+      await updateStep("2", "RUNNING");
+      await sleep(1000);
+
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const monthlySalary = Math.round(employee.salary / 12);
+      const allowances = Math.round(monthlySalary * 0.1);
+      const tax = Math.round(monthlySalary * 0.08);
+      const netPay = monthlySalary + allowances - tax;
+
+      await updateStep("2", "COMPLETED", `Base: $${monthlySalary}, Allowances: $${allowances}, Tax: $${tax}, Net: $${netPay}`);
+
+      await updateStep("3", "RUNNING");
+      await sleep(1000);
+
+      const existing = await prisma.payroll.findUnique({
+        where: {
+          employeeId_month_year: {
+            employeeId: employee.id,
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+          },
+        },
+      });
+
+      if (existing) {
+        await updateStep("3", "COMPLETED", `Payroll already exists for ${monthNames[now.getMonth()]} ${now.getFullYear()}. Skipping.`);
+      } else {
+        await prisma.payroll.create({
+          data: {
+            employeeId: employee.id,
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            baseSalary: monthlySalary,
+            allowances,
+            deductions: 0,
+            tax,
+            bonuses: 0,
+            netPay: monthlySalary + allowances - tax,
+            status: "DRAFT",
+            notes: `Auto-generated by AI workflow for ${employee.name}`,
+          },
+        });
+        await updateStep("3", "COMPLETED", `Payroll created for ${monthNames[now.getMonth()]} ${now.getFullYear()}: Net $${(monthlySalary + allowances - tax).toLocaleString()}`);
+      }
+
+      await updateStep("4", "RUNNING");
+      await sleep(800);
+
+      await prisma.notification.create({
+        data: {
+          userId: employee.userId,
+          title: "Payroll Generated",
+          message: `Your payroll for ${monthNames[now.getMonth()]} ${now.getFullYear()} has been generated. Net pay: $${(monthlySalary + allowances - tax).toLocaleString()}.`,
+          type: "INFO",
+          link: "/payroll",
+        },
+      });
+      await updateStep("4", "COMPLETED", `Notification sent to ${employee.name}`);
+
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "COMPLETED", result: `Payroll generated for ${employee.name}`, completedAt: new Date() },
+      });
+
+      return {
+        id: log.id,
+        workflowType: "PAYROLL",
+        input,
+        status: "COMPLETED" as const,
+        steps,
+        resultSummary: `Payroll generated for ${employee.name} — $${(monthlySalary + allowances - tax).toLocaleString()} net pay`,
+        employeeId: employee.employeeId,
+        createdAt: log.createdAt.toISOString(),
+      };
+    } catch (e: any) {
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "FAILED", result: e.message || "Payroll workflow failed", completedAt: new Date() },
+      });
+      return {
+        id: log.id,
+        workflowType: "PAYROLL",
+        input,
+        status: "FAILED" as const,
+        steps,
+        resultSummary: `Payroll workflow failed: ${e.message || "Unknown error"}`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    }
+  }
+
+  static async runLeaveWorkflow(input: string, triggeredBy: string = "HR System") {
+    const parsed = await parseWorkflowInput(input);
+    const { name, leaveType, days } = parsed.data as { name?: string; leaveType?: string; days?: number; input?: string };
+
+    const steps: WorkflowStep[] = [
+      { id: "1", name: "Locate Employee", description: "Search employee records by name", status: "PENDING" },
+      { id: "2", name: "Validate Leave Balance", description: "Check leave allocation and conflicts", status: "PENDING" },
+      { id: "3", name: "Submit Leave Request", description: "Create leave record in the system", status: "PENDING" },
+      { id: "4", name: "Notify Approver", description: "Send leave request to manager", status: "PENDING" },
+    ];
+
+    const log = await prisma.workflowLog.create({
+      data: {
+        workflowType: "LEAVE",
+        input,
+        status: "RUNNING",
+        steps: JSON.stringify(steps),
+        triggeredBy,
+        startedAt: new Date(),
+      },
+    });
+
+    const updateStep = async (stepId: string, status: WorkflowStep["status"], result?: string) => {
+      const idx = steps.findIndex((s) => s.id === stepId);
+      if (idx !== -1) {
+        steps[idx].status = status;
+        steps[idx].result = result;
+        steps[idx].updatedAt = new Date().toISOString();
+        await prisma.workflowLog.update({
+          where: { id: log.id },
+          data: { steps: JSON.stringify(steps) },
+        });
+      }
+    };
+
+    try {
+      await updateStep("1", "RUNNING");
+      await sleep(800);
+
+      if (!name) {
+        await updateStep("1", "FAILED", "No employee name found in request.");
+        throw new Error("No employee name specified. Usage: Apply leave for [employee name]");
+      }
+
+      const employee = await prisma.employee.findFirst({
+        where: { name: { contains: name, mode: "insensitive" }, status: "ACTIVE" },
+      });
+
+      if (!employee) {
+        await updateStep("1", "FAILED", `Employee "${name}" not found.`);
+        throw new Error(`Employee "${name}" not found.`);
+      }
+
+      await updateStep("1", "COMPLETED", `Found employee: ${employee.name} (${employee.employeeId})`);
+
+      await updateStep("2", "RUNNING");
+      await sleep(1000);
+
+      const leaveDays = days || 3;
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + leaveDays - 1);
+
+      await updateStep("2", "COMPLETED", `${leaveType || "ANNUAL"} leave for ${leaveDays} days from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+
+      await updateStep("3", "RUNNING");
+      await sleep(1000);
+
+      const leave = await prisma.leave.create({
+        data: {
+          employeeId: employee.id,
+          type: leaveType || "ANNUAL",
+          startDate,
+          endDate,
+          days: leaveDays,
+          reason: `Auto-generated by AI workflow: ${input}`,
+          status: "PENDING",
+        },
+      });
+
+      await updateStep("3", "COMPLETED", `Leave request created (ID: ${leave.id})`);
+
+      await updateStep("4", "RUNNING");
+      await sleep(800);
+
+      await prisma.notification.create({
+        data: {
+          userId: employee.userId,
+          title: "Leave Request Submitted",
+          message: `Your ${leaveType || "annual"} leave request for ${leaveDays} days has been submitted for approval.`,
+          type: "INFO",
+          link: "/leave",
+        },
+      });
+      await updateStep("4", "COMPLETED", `Notification sent to ${employee.name}`);
+
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "COMPLETED", result: `Leave request created for ${employee.name}`, completedAt: new Date() },
+      });
+
+      return {
+        id: log.id,
+        workflowType: "LEAVE",
+        input,
+        status: "COMPLETED" as const,
+        steps,
+        resultSummary: `Leave request submitted for ${employee.name} — ${leaveType || "Annual"} leave for ${leaveDays} days`,
+        employeeId: employee.employeeId,
+        createdAt: log.createdAt.toISOString(),
+      };
+    } catch (e: any) {
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "FAILED", result: e.message || "Leave workflow failed", completedAt: new Date() },
+      });
+      return {
+        id: log.id,
+        workflowType: "LEAVE",
+        input,
+        status: "FAILED" as const,
+        steps,
+        resultSummary: `Leave workflow failed: ${e.message || "Unknown error"}`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    }
+  }
+
   static async runGeneralWorkflow(input: string, triggeredBy: string = "HR System") {
     const parsed = await parseWorkflowInput(input);
     
@@ -788,6 +1074,14 @@ export class WorkflowEngine {
 
     if (parsed.type === "INTERVIEW") {
       return this.runInterviewWorkflow(input, triggeredBy);
+    }
+
+    if (parsed.type === "PAYROLL") {
+      return this.runPayrollWorkflow(input, triggeredBy);
+    }
+
+    if (parsed.type === "LEAVE") {
+      return this.runLeaveWorkflow(input, triggeredBy);
     }
 
     // Default mock workflow for other inputs
@@ -828,15 +1122,7 @@ export class WorkflowEngine {
 
       await updateStep("2", "RUNNING");
       await sleep(1500);
-      let summary = "";
-      if (parsed.type === "PAYROLL") {
-        summary = "Scanned employee logs. Prepared base salaries for processing month.";
-      } else if (parsed.type === "LEAVE") {
-        summary = "Retrieved leave allocation balances and processed automated guidelines.";
-      } else {
-        summary = "Executed custom tasks based on unstructured input guidelines.";
-      }
-      await updateStep("2", "COMPLETED", summary);
+      await updateStep("2", "COMPLETED", "Executed custom tasks based on unstructured input guidelines.");
 
       await updateStep("3", "RUNNING");
       await sleep(800);

@@ -56,6 +56,15 @@ export default function WorkflowConsolePage() {
       normalized.includes("interview") ||
       normalized.includes("schedule");
 
+    const detectPayroll =
+      normalized.includes("payroll") ||
+      normalized.includes("generate payroll") ||
+      normalized.includes("run salaries");
+
+    const detectLeave =
+      normalized.includes("leave") ||
+      normalized.includes("time off");
+
     const stepsList: WorkflowStep[] = detectOnboarding
       ? [
           { id: "1", name: "Create Employee Profile", description: "Initialize profile in database", status: "RUNNING" },
@@ -75,6 +84,20 @@ export default function WorkflowConsolePage() {
           { id: "2", name: "Identify Shortlisted Candidates", description: "Filter candidates matching the criteria", status: "PENDING" },
           { id: "3", name: "Schedule Interview Slots", description: "Create interview records for qualified candidates", status: "PENDING" },
           { id: "4", name: "Notify Panel & Candidates", description: "Send dashboard alerts", status: "PENDING" },
+        ]
+      : detectPayroll
+      ? [
+          { id: "1", name: "Locate Employee", description: "Search employee records by name", status: "RUNNING" },
+          { id: "2", name: "Calculate Salary", description: "Compute base salary, allowances, and deductions", status: "PENDING" },
+          { id: "3", name: "Generate Payroll Record", description: "Create payroll entry in the system", status: "PENDING" },
+          { id: "4", name: "Notify Employee", description: "Send payroll notification", status: "PENDING" },
+        ]
+      : detectLeave
+      ? [
+          { id: "1", name: "Locate Employee", description: "Search employee records by name", status: "RUNNING" },
+          { id: "2", name: "Validate Leave Balance", description: "Check leave allocation and conflicts", status: "PENDING" },
+          { id: "3", name: "Submit Leave Request", description: "Create leave record in the system", status: "PENDING" },
+          { id: "4", name: "Notify Approver", description: "Send leave request to manager", status: "PENDING" },
         ]
       : [
           { id: "1", name: "Locate Employee Profile", description: "Search database for matching employee", status: "RUNNING" },
