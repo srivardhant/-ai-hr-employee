@@ -132,3 +132,32 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
+    }
+
+    const employee = await prisma.employee.findUnique({ where: { id } });
+    if (!employee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    }
+
+    // Delete related records first
+    await prisma.payroll.deleteMany({ where: { employeeId: id } });
+    await prisma.leave.deleteMany({ where: { employeeId: id } });
+    await prisma.trainingAssignment.deleteMany({ where: { employeeId: id } });
+    await prisma.performanceReview.deleteMany({ where: { employeeId: id } });
+    await prisma.promotion.deleteMany({ where: { employeeId: id } });
+    await prisma.notification.deleteMany({ where: { userId: employee.userId } });
+    await prisma.employee.delete({ where: { id } });
+    await prisma.user.delete({ where: { id: employee.userId } });
+
+    return NextResponse.json({ message: "Employee deleted successfully" });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

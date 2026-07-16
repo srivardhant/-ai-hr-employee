@@ -14,8 +14,9 @@ const SUGGESTIONS = [
   "Show Engineering team",
   "Who's due for promotion?",
   "Dashboard summary",
-  "Who is Emma Watson?",
   "Pending leave requests",
+  "Scheduled interviews",
+  "Training status",
 ];
 
 async function fetchJson(url: string) {
@@ -172,31 +173,84 @@ export default function AIAssistant() {
         }
       }
 
+      // --- Interviews ---
+      else if (/interview|schedule.*interview|panel/.test(q)) {
+        const interviews = await fetchJson("/api/interviews");
+        if (interviews?.length) {
+          const upcoming = interviews.filter((i: any) => i.status === "SCHEDULED");
+          const completed = interviews.filter((i: any) => i.status === "COMPLETED");
+          answer = `**${interviews.length} interviews** (${upcoming.length} scheduled, ${completed.length} completed).`;
+          if (upcoming.length) {
+            answer += `\nUpcoming:\n${upcoming.slice(0, 5).map((i: any) => `• ${i.candidate?.name || "Candidate"} — ${i.type} (${new Date(i.scheduledAt).toLocaleDateString()})`).join("\n")}`;
+          }
+        } else {
+          answer = "No interviews scheduled.";
+        }
+      }
+
+      // --- Onboarding ---
+      else if (/onboarding|onboard|new hire/.test(q)) {
+        const onboardings = await fetchJson("/api/onboarding");
+        if (onboardings?.length) {
+          const pending = onboardings.filter((o: any) => o.status !== "COMPLETED");
+          answer = `**${onboardings.length} onboarding(s)** (${pending.length} in progress).`;
+        } else {
+          answer = "No onboarding records found.";
+        }
+      }
+
+      // --- Offers ---
+      else if (/offer|offer letter/.test(q)) {
+        const offers = await fetchJson("/api/offers");
+        if (offers?.length) {
+          const pending = offers.filter((o: any) => o.status === "DRAFT" || o.status === "SENT");
+          answer = `**${offers.length} offer(s)** (${pending.length} pending).`;
+          if (offers.length <= 5) {
+            answer += `\n${offers.map((o: any) => `• ${o.candidate?.name || "Candidate"} — ${o.position} ($${fmt(o.salary)})`).join("\n")}`;
+          }
+        } else {
+          answer = "No offers found.";
+        }
+      }
+
+      // --- Evaluations ---
+      else if (/evaluation|evaluate|score/.test(q)) {
+        const evals = await fetchJson("/api/evaluations");
+        if (evals?.length) {
+          const avg = evals.reduce((s: number, e: any) => s + (e.overallScore || 0), 0) / evals.length;
+          answer = `**${evals.length} evaluation(s)**. Average overall score: **${avg.toFixed(1)}/10**.`;
+        } else {
+          answer = "No evaluations found.";
+        }
+      }
+
       // --- Summary ---
       else if (/summary|dashboard|overview|snapshot/.test(q)) {
-        const [emps, cands, leaves, payrolls, promos] = await Promise.all([
+        const [emps, cands, leaves, payrolls, promos, interviews] = await Promise.all([
           fetchJson("/api/employees"),
           fetchJson("/api/candidates"),
           fetchJson("/api/leave"),
           fetchJson("/api/payroll"),
           fetchJson("/api/promotions"),
+          fetchJson("/api/interviews"),
         ]);
         const empCount = emps?.length || 0;
         const candCount = cands?.length || 0;
         const leavePending = leaves?.filter((l: any) => l.status === "PENDING").length || 0;
         const payrollTotal = payrolls?.reduce((s: number, p: any) => s + (p.netPay || 0), 0) || 0;
         const promoCount = promos?.length || 0;
-        answer = `**Company Snapshot**\n• Employees: **${empCount}**\n• Candidates: **${candCount}**\n• Pending leaves: **${leavePending}**\n• Payroll total: **$${fmt(payrollTotal)}**\n• Promotions: **${promoCount}**`;
+        const interviewCount = interviews?.length || 0;
+        answer = `**Company Snapshot**\n• Employees: **${empCount}**\n• Candidates: **${candCount}**\n• Pending leaves: **${leavePending}**\n• Payroll total: **$${fmt(payrollTotal)}**\n• Promotions: **${promoCount}**\n• Interviews: **${interviewCount}**`;
       }
 
       // --- Greeting ---
       else if (/^(hi|hello|hey|good )/.test(q)) {
-        answer = "Hello! I can look up **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance** from your live HR data. Try asking something!";
+        answer = "Hello! I can look up **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, **interviews**, **onboarding**, **offers**, and **evaluations** from your live HR data. Try asking something!";
       }
 
       // --- Fallback ---
       else {
-        answer = "I can look up live data about **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, and **performance**. Try:\n• *\"How many employees?\"*\n• *\"Show Engineering team\"*\n• *\"Who is Emma Watson?\"*\n• *\"Pending leave requests\"*";
+        answer = "I can look up live data about **employees**, **departments**, **payroll**, **leave**, **training**, **promotions**, **candidates**, **interviews**, **onboarding**, **offers**, and **evaluations**. Try:\n• *\"How many employees?\"*\n• *\"Show Engineering team\"*\n• *\"Scheduled interviews\"*\n• *\"Pending leave requests\"*";
       }
 
       if (!answer) answer = "I couldn't find anything. Try rephrasing your question.";

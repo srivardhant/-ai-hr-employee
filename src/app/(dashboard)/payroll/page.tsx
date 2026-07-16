@@ -184,17 +184,17 @@ export default function PayrollPage() {
       doc.setFont("Helvetica", "bold");
       doc.text("Employee Name:", 20, 58);
       doc.setFont("Helvetica", "normal");
-      doc.text(pay.employee?.name || "Emma Watson", 70, 58);
+      doc.text(pay.employee?.name || "Employee", 70, 58);
 
       doc.setFont("Helvetica", "bold");
       doc.text("Employee ID:", 20, 64);
       doc.setFont("Helvetica", "normal");
-      doc.text(pay.employee?.employeeId || "EMP-003", 70, 64);
+      doc.text(pay.employee?.employeeId || "N/A", 70, 64);
 
       doc.setFont("Helvetica", "bold");
       doc.text("Department:", 20, 70);
       doc.setFont("Helvetica", "normal");
-      doc.text(pay.employee?.department || "Marketing", 70, 70);
+      doc.text(pay.employee?.department || "N/A", 70, 70);
 
       doc.setFont("Helvetica", "bold");
       doc.text("Pay Period:", 20, 76);

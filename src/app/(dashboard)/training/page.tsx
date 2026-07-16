@@ -209,7 +209,7 @@ export default function TrainingPage() {
       doc.setFontSize(22);
       doc.setFont("Helvetica", "bold");
       doc.setTextColor(99, 102, 241);
-      doc.text(assignment.employee?.name || "Emma Watson", 148, 90, { align: "center" });
+      doc.text(assignment.employee?.name || "Employee", 148, 90, { align: "center" });
 
       doc.setFontSize(14);
       doc.setFont("Helvetica", "normal");

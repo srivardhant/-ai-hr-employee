@@ -58,6 +58,7 @@ export default function EmployeesPage() {
   };
 
   const isEmployee = role === "EMPLOYEE";
+  const canManage = role === "HR" || role === "MANAGER";
   const managers = employees.filter((e) => e.userId && e.userId !== "");
 
   const toggleSelect = (id: string) => {
@@ -134,7 +135,7 @@ export default function EmployeesPage() {
       />
 
       {/* Bulk Action Bar */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-200/30 dark:border-indigo-800/30">
           <CheckSquare className="w-4 h-4 text-indigo-500" />
           <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{selected.size} selected</span>
@@ -166,11 +167,13 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">
-                    <button onClick={toggleAll} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                      {selected.size === employees.length ? <CheckSquare size={16} /> : <Square size={16} />}
-                    </button>
-                  </TableHead>
+                  {canManage && (
+                    <TableHead className="w-10">
+                      <button onClick={toggleAll} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                        {selected.size === employees.length ? <CheckSquare size={16} /> : <Square size={16} />}
+                      </button>
+                    </TableHead>
+                  )}
                   <TableHead>Avatar</TableHead>
                   <TableHead>Employee Name & ID</TableHead>
                   <TableHead>Position & Dept</TableHead>
@@ -183,11 +186,13 @@ export default function EmployeesPage() {
               <TableBody>
                 {employees.map((emp) => (
                   <TableRow key={emp.id}>
-                    <TableCell>
-                      <button onClick={() => toggleSelect(emp.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                        {selected.has(emp.id) ? <CheckSquare size={16} className="text-indigo-500" /> : <Square size={16} />}
-                      </button>
-                    </TableCell>
+                    {canManage && (
+                      <TableCell>
+                        <button onClick={() => toggleSelect(emp.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                          {selected.has(emp.id) ? <CheckSquare size={16} className="text-indigo-500" /> : <Square size={16} />}
+                        </button>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Avatar name={emp.name} src={emp.profileImage} size="sm" />
                     </TableCell>
