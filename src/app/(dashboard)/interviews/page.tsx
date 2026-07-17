@@ -165,7 +165,9 @@ export default function InterviewsPage() {
                     <TableHead>Interview Type</TableHead>
                     <TableHead>Panel Members</TableHead>
                     <TableHead>Location</TableHead>
+                    <TableHead>Calendar Sync</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -191,13 +193,77 @@ export default function InterviewsPage() {
                       <TableCell className="font-medium text-indigo-500">{int.type}</TableCell>
                       <TableCell className="text-slate-400 text-xs">{int.panelMembers}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5 text-xs text-indigo-500">
-                          <Video className="w-4 h-4 text-slate-400" />
-                          <span>{int.location}</span>
+                        <div className="flex flex-col gap-1 text-xs">
+                          {int.googleMeetLink ? (
+                            <a href={int.googleMeetLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-500 hover:underline">
+                              <Video className="w-4 h-4" /> Join Meet
+                            </a>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-slate-500">
+                              <Video className="w-4 h-4 text-slate-400" />
+                              <span>{int.location}</span>
+                            </div>
+                          )}
+                          {int.googleCalendarLink && (
+                            <a href={int.googleCalendarLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:underline">
+                              <Calendar className="w-3 h-3" /> Event Link
+                            </a>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
+                        {int.calendarSyncStatus === "SUCCESS" && <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">Synced</span>}
+                        {int.calendarSyncStatus === "FAILED" && <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs" title={int.calendarErrorMessage}>Failed</span>}
+                        {int.calendarSyncStatus === "PENDING" && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">Pending</span>}
+                      </TableCell>
+                      <TableCell>
                         <StatusBadge status={int.status} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {(int.calendarSyncStatus === "FAILED" || int.calendarSyncStatus === "PENDING") && (
+                            <button
+                              onClick={async () => {
+                                toast.loading("Syncing...", { id: `sync-${int.id}` });
+                                try {
+                                  const res = await fetch(`/api/interviews/${int.id}/sync`, { method: "POST" });
+                                  if (res.ok) {
+                                    toast.success("Synced successfully", { id: `sync-${int.id}` });
+                                    fetchData();
+                                  } else {
+                                    toast.error("Sync failed", { id: `sync-${int.id}` });
+                                  }
+                                } catch(e) {
+                                  toast.error("Error", { id: `sync-${int.id}` });
+                                }
+                              }}
+                              className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2 py-1 rounded"
+                            >
+                              Retry
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              if(confirm("Are you sure you want to cancel this interview?")) {
+                                toast.loading("Cancelling...", { id: `cancel-${int.id}` });
+                                try {
+                                  const res = await fetch(`/api/interviews/${int.id}`, { method: "DELETE" });
+                                  if (res.ok) {
+                                    toast.success("Cancelled successfully", { id: `cancel-${int.id}` });
+                                    fetchData();
+                                  } else {
+                                    toast.error("Cancel failed", { id: `cancel-${int.id}` });
+                                  }
+                                } catch(e) {
+                                  toast.error("Error", { id: `cancel-${int.id}` });
+                                }
+                              }
+                            }}
+                            className="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

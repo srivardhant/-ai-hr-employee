@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "prisma generate && next build --webpack",
-"vercel-build": "prisma generate && prisma db push && prisma db seed && next build --webpack",
+    "vercel-build": "prisma generate && prisma db push && prisma db seed && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "npx prisma generate"
@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "framer-motion": "^12.42.2",
+    "googleapis": "^173.0.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
@@ -23,6 +24,7 @@
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.9.2",
+    "resend": "^6.17.2",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },

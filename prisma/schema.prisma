@@ -162,6 +162,12 @@ model Interview {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  googleEventId         String?
+  googleMeetLink        String?
+  googleCalendarLink    String?
+  calendarSyncStatus    String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  calendarErrorMessage  String?
+  
   candidate     Candidate @relation(fields: [candidateId], references: [id])
 
   @@index([status])
@@ -491,4 +497,18 @@ model WorkflowLog {
   @@index([workflowType])
   @@index([status])
   @@index([createdAt])
+}
+
+// ============================================
+// GOOGLE INTEGRATION
+// ============================================
+
+model GoogleIntegration {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  accessToken    String
+  refreshToken   String
+  tokenExpiry    DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
