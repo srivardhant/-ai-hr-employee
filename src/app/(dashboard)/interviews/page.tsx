@@ -194,32 +194,35 @@ export default function InterviewsPage() {
                       <TableCell className="text-slate-400 text-xs">{int.panelMembers}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1 text-xs">
-                          {int.googleMeetLink ? (
-                            (() => {
-                              const scheduledTime = new Date(int.scheduledAt).getTime();
-                              const now = new Date().getTime();
-                              const showLink = now >= scheduledTime - 30 * 60 * 1000;
-                              
-                              if (showLink) {
-                                return (
-                                  <a href={int.googleMeetLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-500 hover:underline">
-                                    <Video className="w-4 h-4" /> Join Meet
-                                  </a>
-                                );
-                              }
+                          {(() => {
+                            const scheduledTime = new Date(int.scheduledAt).getTime();
+                            const now = new Date().getTime();
+                            const showLink = now >= scheduledTime - 30 * 60 * 1000;
+                            
+                            if (!showLink) {
                               return (
-                                <div className="flex items-center gap-1.5 text-slate-500" title="Link will appear 30 mins before interview">
+                                <div className="flex items-center gap-1.5 text-slate-500" title="Location/Link will appear 30 mins before interview">
                                   <Video className="w-4 h-4 text-slate-400" />
                                   <span>Available 30m before</span>
                                 </div>
                               );
-                            })()
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-slate-500">
-                              <Video className="w-4 h-4 text-slate-400" />
-                              <span>{int.location}</span>
-                            </div>
-                          )}
+                            }
+
+                            if (int.googleMeetLink) {
+                              return (
+                                <a href={int.googleMeetLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-500 hover:underline">
+                                  <Video className="w-4 h-4" /> Join Meet
+                                </a>
+                              );
+                            }
+
+                            return (
+                              <div className="flex items-center gap-1.5 text-slate-500">
+                                <Video className="w-4 h-4 text-slate-400" />
+                                <span>{int.location}</span>
+                              </div>
+                            );
+                          })()}
                           {int.googleCalendarLink && (
                             <a href={int.googleCalendarLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:underline">
                               <Calendar className="w-3 h-3" /> Event Link
