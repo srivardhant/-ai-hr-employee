@@ -53,6 +53,15 @@ export async function GET(request: Request) {
         manager: {
           select: { name: true },
         },
+        onboarding: true,
+        exitProcess: true,
+        _count: {
+          select: {
+            trainings: true,
+            payrolls: true,
+            leaves: true,
+          }
+        }
       },
       orderBy: { employeeId: "asc" },
     });

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
@@ -91,31 +92,29 @@ export default function RoleDashboard() {
    HR DASHBOARD
    =============================== */
 function HRDashboard({ data, notifications, onMarkAllRead }: any) {
-  const s = data?.stats || {};
   return (
     <>
-      <PageHeader title="HR Operations Dashboard" description="Recruitment pipeline, employee lifecycle, and HR analytics."
-        action={<div className="flex items-center gap-2"><DemoTour /><span className="flex items-center gap-2 text-xs font-semibold text-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-1.5 rounded-xl border border-cyan-200/30 dark:border-cyan-800/30"><Users className="w-3.5 h-3.5" />HR Operations</span></div>}
+      <PageHeader title="HR Dashboard" description="Welcome to the HR Management Console."
+        action={<div className="flex items-center gap-2"><span className="flex items-center gap-2 text-xs font-semibold text-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-1.5 rounded-xl border border-cyan-200/30 dark:border-cyan-800/30"><Users className="w-3.5 h-3.5" />HR Operations</span></div>}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard title="Active Employees" value={s.totalEmployees} icon={UserCheck} color="from-emerald-500 to-teal-600" />
-        <StatCard title="Open Jobs" value={s.openRecruitment} icon={Briefcase} color="from-violet-500 to-pink-600" />
-        <StatCard title="Total Candidates" value={s.candidatesCount} icon={Users} color="from-indigo-500 to-purple-600" />
-        <StatCard title="Interviews Scheduled" value={s.interviewsScheduled} icon={Calendar} color="from-amber-500 to-orange-600" />
-        <StatCard title="Pending Offers" value={s.pendingOffers} icon={FileCheck} color="from-sky-500 to-blue-600" />
-        <StatCard title="Onboarding In Progress" value={s.onboardingProgress} icon={UserPlus} color="from-cyan-500 to-blue-600" />
-        <StatCard title="Active Trainings" value={s.activeTrainings} icon={GraduationCap} color="from-fuchsia-500 to-purple-600" />
-        <StatCard title="Pending Leaves" value={s.pendingLeaves} icon={Clock} color="from-rose-500 to-pink-500" />
-        <StatCard title="Engagement Score" value={s.employeeEngagementScore} suffix="/5" icon={Heart} color="from-pink-500 to-rose-600" />
-      </div>
-      <AIInsights role="HR" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BarChartWidget title="Candidates by Status" data={data?.candidateChart || []} />
-        <BarChartWidget title="Training Completion Status" data={data?.trainingChart || []} />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActivityTimeline activities={data?.activities || []} />
-        <NotificationsPanel notifications={notifications} onMarkAllRead={onMarkAllRead} />
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 pb-12">
+        <Link href="/employees" className="group relative flex flex-col items-center justify-center w-72 h-72 bg-white dark:bg-slate-800/90 backdrop-blur-xl rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-indigo-500/20 border border-slate-200/60 dark:border-slate-700/50 transition-all duration-300 hover:-translate-y-2 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="w-24 h-24 mb-6 bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-500/20 dark:to-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 border border-indigo-200/50 dark:border-indigo-500/20 shadow-inner">
+            <Users size={48} strokeWidth={1.5} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Employees</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center px-6 relative z-10">Manage employee records, payroll, leave requests, and training.</p>
+        </Link>
+        
+        <Link href="/interviews" className="group relative flex flex-col items-center justify-center w-72 h-72 bg-white dark:bg-slate-800/90 backdrop-blur-xl rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-fuchsia-500/20 border border-slate-200/60 dark:border-slate-700/50 transition-all duration-300 hover:-translate-y-2 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="w-24 h-24 mb-6 bg-gradient-to-br from-fuchsia-100 to-fuchsia-50 dark:from-fuchsia-500/20 dark:to-fuchsia-500/10 rounded-2xl flex items-center justify-center text-fuchsia-600 dark:text-fuchsia-400 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 border border-fuchsia-200/50 dark:border-fuchsia-500/20 shadow-inner">
+            <Calendar size={48} strokeWidth={1.5} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 relative z-10">Meetings</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center px-6 relative z-10">Schedule and view upcoming interviews and team meetings.</p>
+        </Link>
       </div>
     </>
   );

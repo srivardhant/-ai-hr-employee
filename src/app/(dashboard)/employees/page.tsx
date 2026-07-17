@@ -7,13 +7,14 @@ import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, Download, Upload, Trash2, GraduationCap, CheckSquare, Square } from "lucide-react";
+import { Plus, Download, Upload, Trash2, GraduationCap, CheckSquare, Square, Filter, ArrowLeft } from "lucide-react";
 import { downloadCSV } from "@/lib/csv";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -23,6 +24,8 @@ export default function EmployeesPage() {
   const [role, setRole] = useState("HR");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [filter, setFilter] = useState("All");
+  const router = useRouter();
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", department: "Engineering", position: "", salary: "",
@@ -105,31 +108,48 @@ export default function EmployeesPage() {
     finally { setImporting(false); }
   };
 
+  const filteredEmployees = employees;
+
   return (
     <div className="space-y-6">
+      <div>
+        <Button variant="ghost" className="mb-2 -ml-2 text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={() => router.push('/')}>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+        </Button>
+      </div>
       <PageHeader
-        title="Employee Roster & Directory"
-        description="Verify active staff records, modify roles, manage reporting hierarchies, and check departments."
+        title="Employees"
+        description="Manage your organization's employee directory."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-indigo-500/20">
+              <Filter className="w-4 h-4 text-slate-400 mr-2" />
+              <select 
+                value={filter} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFilter("All"); // Reset the dropdown visual state
+                  if (val === "Leave") router.push("/leave");
+                  else if (val === "Trainings") router.push("/training");
+                  else if (val === "Payroll") router.push("/payroll");
+                  else if (val === "Onboarding") router.push("/onboarding");
+                  else if (val === "Offboarding") router.push("/exit");
+                }}
+                className="bg-transparent text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
+              >
+                <option value="All">All Categories</option>
+                <option value="Leave">Leave</option>
+                <option value="Trainings">Trainings</option>
+                <option value="Payroll">Payroll</option>
+                <option value="Onboarding">Onboarding</option>
+                <option value="Offboarding">Offboarding</option>
+              </select>
+            </div>
             {!isEmployee && (
               <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setIsModalOpen(true)} data-shortcut="new">
-                Add Employee Profile
+                + Add
               </Button>
             )}
-            <label className="cursor-pointer">
-              <Button variant="secondary" icon={importing ? <span className="animate-spin inline-block">◌</span> : <Upload className="w-4 h-4" />}>
-                Import CSV
-              </Button>
-              <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-            </label>
-            <Button variant="secondary" icon={<Download className="w-4 h-4" />}
-              onClick={() => downloadCSV(employees.map((e: any) => ({
-                Name: e.name, Email: e.email, Department: e.department, Position: e.position,
-                Status: e.status, Phone: e.phone,
-              })), "employees")}>
-              Export CSV
-            </Button>
           </div>
         }
       />
@@ -161,8 +181,8 @@ export default function EmployeesPage() {
         <CardContent>
           {loading ? (
             <div className="space-y-3">{[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" />)}</div>
-          ) : employees.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">No employee profiles cataloged.</div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">No employee profiles matched the filter.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -178,17 +198,19 @@ export default function EmployeesPage() {
                   <TableHead>Employee Name & ID</TableHead>
                   <TableHead>Position & Dept</TableHead>
                   <TableHead>Reporting Manager</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  {!isEmployee && <TableHead>Compensation ($)</TableHead>}
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((emp) => (
-                  <TableRow key={emp.id}>
+                {filteredEmployees.map((emp) => (
+                  <TableRow 
+                    key={emp.id}
+                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => router.push(`/employees/${emp.id}`)}
+                  >
                     {canManage && (
                       <TableCell>
-                        <button onClick={() => toggleSelect(emp.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                        <button onClick={(e) => { e.stopPropagation(); toggleSelect(emp.id); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                           {selected.has(emp.id) ? <CheckSquare size={16} className="text-indigo-500" /> : <Square size={16} />}
                         </button>
                       </TableCell>
@@ -211,12 +233,6 @@ export default function EmployeesPage() {
                     <TableCell className="text-slate-500 font-medium">
                       {emp.manager?.name || "Hierarchical Root"}
                     </TableCell>
-                    <TableCell>{formatDate(emp.joinDate)}</TableCell>
-                    {!isEmployee && (
-                      <TableCell className="font-semibold text-slate-700 dark:text-slate-350">
-                        {formatCurrency(emp.salary)}/yr
-                      </TableCell>
-                    )}
                     <TableCell>
                       <StatusBadge status={emp.status} />
                     </TableCell>
