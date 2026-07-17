@@ -19,7 +19,7 @@ export interface WorkflowStep {
 
 export interface WorkflowResult {
   id: string;
-  workflowType: "ONBOARDING" | "OFFBOARDING" | "PROMOTION" | "PAYROLL" | "LEAVE" | "INTERVIEW" | "UNKNOWN";
+  workflowType: "ONBOARDING" | "OFFBOARDING" | "PROMOTION" | "PAYROLL" | "LEAVE" | "INTERVIEW" | "UNKNOWN" | "JOB_POSTING" | "CUSTOM";
   input: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
   steps: WorkflowStep[];
@@ -95,6 +95,24 @@ export async function parseWorkflowInput(input: string) {
     const nameMatch = input.match(/(?:for|of|employee)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
     const name = nameMatch?.[1]?.trim() || "";
     return { type: "PAYROLL" as const, data: { name, input } };
+  }
+
+  if (normalized.includes("post a job") || normalized.includes("job posting") || normalized.includes("recruit")) {
+    const titleMatch = input.match(/(?:for|as)\s+([A-Za-z0-9\s]+?)(?:\.|\s+in|\s+with|\s+at|$)/i);
+    let title = titleMatch?.[1]?.trim() || "Senior Developer";
+    const skipWords = ["a", "an", "the"];
+    if (skipWords.includes(title.toLowerCase())) {
+        title = "Senior Developer"; 
+    }
+    
+    let department = "Engineering";
+    if (normalized.includes("marketing")) department = "Marketing";
+    else if (normalized.includes("design")) department = "Design";
+    else if (normalized.includes("finance")) department = "Finance";
+    else if (normalized.includes("sales")) department = "Sales";
+    else if (normalized.includes("hr")) department = "HR";
+    
+    return { type: "JOB_POSTING" as const, data: { title, department } };
   }
 
   return { type: "UNKNOWN" as const, data: {} };
@@ -1061,6 +1079,128 @@ export class WorkflowEngine {
     }
   }
 
+  static async runJobPostingWorkflow(input: string, triggeredBy: string = "HR System") {
+    const parsed = await parseWorkflowInput(input);
+    if (parsed.type !== "JOB_POSTING") {
+      throw new Error("Invalid workflow input for Job Posting");
+    }
+
+    const { title, department } = parsed.data;
+
+    const steps: WorkflowStep[] = [
+      { id: "1", name: "Analyze Job Requirements", description: "Parse job title and target department", status: "PENDING" },
+      { id: "2", name: "Create Job Opening Record", description: "Draft the opening in the Recruitment module", status: "PENDING" },
+      { id: "3", name: "Notify Recruitment Team", description: "Alert stakeholders about the new opening", status: "PENDING" },
+    ];
+
+    const log = await prisma.workflowLog.create({
+      data: {
+        workflowType: "JOB_POSTING",
+        input,
+        status: "RUNNING",
+        steps: JSON.stringify(steps),
+        triggeredBy,
+        startedAt: new Date(),
+      },
+    });
+
+    const updateStep = async (stepId: string, status: WorkflowStep["status"], result?: string) => {
+      const idx = steps.findIndex((s) => s.id === stepId);
+      if (idx !== -1) {
+        steps[idx].status = status;
+        steps[idx].result = result;
+        steps[idx].updatedAt = new Date().toISOString();
+        await prisma.workflowLog.update({
+          where: { id: log.id },
+          data: { steps: JSON.stringify(steps) },
+        });
+      }
+    };
+
+    try {
+      await updateStep("1", "RUNNING");
+      await sleep(1000);
+      await updateStep("1", "COMPLETED", `Identified role: ${title} in ${department}`);
+
+      await updateStep("2", "RUNNING");
+      await sleep(1000);
+      
+      const job = await prisma.jobOpening.create({
+        data: {
+          title,
+          department,
+          description: `Auto-generated draft description for ${title} in ${department}. Please review and expand.`,
+          requirements: "To be defined by Hiring Manager.",
+          location: "Remote",
+          type: "Full-time",
+          openings: 1,
+          status: "OPEN",
+        },
+      });
+
+      await updateStep("2", "COMPLETED", `Job Opening created (ID: ${job.id})`);
+
+      await updateStep("3", "RUNNING");
+      await sleep(800);
+
+      const recruiters = await prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "HR"] } },
+      });
+
+      for (const rec of recruiters) {
+        await prisma.notification.create({
+          data: {
+            userId: rec.id,
+            title: "New Job Posted via AI",
+            message: `A new job opening for ${title} has been posted.`,
+            type: "WORKFLOW",
+            link: "/recruitment",
+          },
+        });
+      }
+
+      await updateStep("3", "COMPLETED", "Recruitment team notified.");
+
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "COMPLETED", result: `Posted job opening for ${title}`, completedAt: new Date() },
+      });
+
+      return {
+        id: log.id,
+        workflowType: "JOB_POSTING" as const,
+        input,
+        status: "COMPLETED" as const,
+        steps,
+        resultSummary: `Successfully posted a new job opening for ${title} in the ${department} department.`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    } catch (error: any) {
+      const runningStep = steps.find((s) => s.status === "RUNNING");
+      if (runningStep) {
+        await updateStep(runningStep.id, "FAILED", error.message || "Unexpected failure occurred");
+      }
+      for (const step of steps) {
+        if (step.status === "PENDING" || step.status === "RUNNING") {
+          await updateStep(step.id, "FAILED", "Cancelled due to previous error");
+        }
+      }
+      await prisma.workflowLog.update({
+        where: { id: log.id },
+        data: { status: "FAILED", result: `Job posting workflow failed: ${error.message}`, completedAt: new Date() },
+      });
+      return {
+        id: log.id,
+        workflowType: "JOB_POSTING" as const,
+        input,
+        status: "FAILED" as const,
+        steps,
+        resultSummary: `Failed to post job: ${error.message}`,
+        createdAt: log.createdAt.toISOString(),
+      };
+    }
+  }
+
   static async runGeneralWorkflow(input: string, triggeredBy: string = "HR System") {
     const parsed = await parseWorkflowInput(input);
     
@@ -1082,6 +1222,10 @@ export class WorkflowEngine {
 
     if (parsed.type === "LEAVE") {
       return this.runLeaveWorkflow(input, triggeredBy);
+    }
+
+    if (parsed.type === "JOB_POSTING") {
+      return this.runJobPostingWorkflow(input, triggeredBy);
     }
 
     // Default mock workflow for other inputs
