@@ -97,12 +97,16 @@ export async function parseWorkflowInput(input: string) {
     return { type: "PAYROLL" as const, data: { name, input } };
   }
 
-  if (normalized.includes("post a job") || normalized.includes("job posting") || normalized.includes("recruit")) {
-    const titleMatch = input.match(/(?:for|as)\s+([A-Za-z0-9\s]+?)(?:\.|\s+in|\s+with|\s+at|$)/i);
+  if (normalized.includes("post a job") || normalized.includes("post job") || normalized.includes("job posting") || normalized.includes("recruit") || normalized.includes("hiring")) {
+    const titleMatch = input.match(/(?:for|as)\s+([A-Za-z0-9\s\-_]+?)(?:\.|\s+in|\s+with|\s+at|$)/i);
     let title = titleMatch?.[1]?.trim() || "Senior Developer";
-    const skipWords = ["a", "an", "the"];
-    if (skipWords.includes(title.toLowerCase())) {
-        title = "Senior Developer"; 
+    
+    // Remove leading articles
+    title = title.replace(/^(a|an|the)\s+/i, "");
+    
+    // Basic fallback if empty
+    if (!title || title.length < 2) {
+      title = "Senior Developer";
     }
     
     let department = "Engineering";
