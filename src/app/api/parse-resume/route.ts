@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Resume text too short" }, { status: 400 });
     }
 
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const lines = text.split("\n").map((l: string) => l.trim()).filter(Boolean);
     const full = text;
 
     // Extract name (usually first non-empty line)
