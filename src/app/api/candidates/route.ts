@@ -4,6 +4,8 @@ import { candidateSchema } from "@/lib/validators";
 import { ZodError } from "zod";
 import { generateScreenScore } from "@/lib/ai";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const candidates = await prisma.candidate.findMany({

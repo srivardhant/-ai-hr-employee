@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { interviewSchema } from "@/lib/validators";
 import { ZodError } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const interviews = await prisma.interview.findMany({
