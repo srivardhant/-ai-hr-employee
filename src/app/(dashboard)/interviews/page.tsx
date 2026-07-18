@@ -92,12 +92,10 @@ export default function InterviewsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Fix timezone: datetime-local gives "2026-07-18T17:30" (no tz info).
-      // JS would parse this as UTC, shifting time by ±offset hours.
-      // We convert to a full ISO string using the local timezone offset.
-      const localDate = new Date(form.scheduledAt);
-      const tzOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
-      const localISOString = new Date(localDate.getTime() - tzOffsetMs).toISOString();
+      // Convert the datetime-local value (which is in local time) to a standard UTC ISO string.
+      // Modern browsers parse datetime-local string as local time, so calling .toISOString()
+      // automatically handles the timezone offset conversion correctly.
+      const localISOString = new Date(form.scheduledAt).toISOString();
 
       const payload = { ...form, scheduledAt: localISOString };
 
