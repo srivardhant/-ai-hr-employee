@@ -1,6 +1,15 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.EMAIL_PROVIDER_API_KEY);
+let resendClient: Resend | null = null;
+
+function getResendClient() {
+  if (!resendClient) {
+    // If API key is empty, provide a fallback fake key so the constructor doesn't crash on import
+    const apiKey = process.env.EMAIL_PROVIDER_API_KEY || "re_1234567890123456789012345678";
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+}
 
 export async function sendInterviewEmail({
   candidateEmail,
@@ -52,7 +61,7 @@ export async function sendInterviewEmail({
     </div>
   `;
 
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: process.env.EMAIL_FROM || "onboarding@resend.dev",
     to: candidateEmail,
     subject: `Interview Scheduled - ${interviewType}`,
@@ -69,7 +78,7 @@ export async function sendCancellationEmail({
   candidateName: string;
   interviewType: string;
 }) {
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: process.env.EMAIL_FROM || "onboarding@resend.dev",
     to: candidateEmail,
     subject: `Interview Cancelled - ${interviewType}`,
