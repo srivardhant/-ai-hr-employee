@@ -50,6 +50,44 @@ export default function InterviewsPage() {
     fetchData();
   }, []);
 
+  // Auto-sync interviews when they hit the 30-minute mark
+  useEffect(() => {
+    const checkPendingSyncs = async () => {
+      if (!interviews.length) return;
+      const now = new Date().getTime();
+      let didSync = false;
+
+      for (const int of interviews) {
+        if (int.calendarSyncStatus === "PENDING") {
+          const scheduledTime = new Date(int.scheduledAt).getTime();
+          const timeUntil = scheduledTime - now;
+          
+          // If the interview is exactly within the next 30 minutes
+          if (timeUntil > 0 && timeUntil <= 30 * 60 * 1000) {
+            try {
+              const res = await fetch(`/api/interviews/${int.id}/sync`, { method: "POST" });
+              if (res.ok) {
+                didSync = true;
+                toast.success(`Generated Meet link for ${int.candidate?.name}! Email sent.`);
+              }
+            } catch (e) {
+              console.error("Auto sync failed", e);
+            }
+          }
+        }
+      }
+      
+      if (didSync) {
+        fetchData();
+      }
+    };
+
+    // Check every 10 seconds (useful for real-time hackathon demos)
+    const interval = setInterval(checkPendingSyncs, 10000);
+    
+    return () => clearInterval(interval);
+  }, [interviews]);
+
   const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
