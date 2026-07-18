@@ -92,10 +92,19 @@ export default function InterviewsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Fix timezone: datetime-local gives "2026-07-18T17:30" (no tz info).
+      // JS would parse this as UTC, shifting time by ±offset hours.
+      // We convert to a full ISO string using the local timezone offset.
+      const localDate = new Date(form.scheduledAt);
+      const tzOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+      const localISOString = new Date(localDate.getTime() - tzOffsetMs).toISOString();
+
+      const payload = { ...form, scheduledAt: localISOString };
+
       const res = await fetch("/api/interviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {

@@ -68,11 +68,11 @@ export async function createGoogleCalendarEvent(
     description: description,
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: "UTC",
+      timeZone: "Asia/Kolkata",
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: "UTC",
+      timeZone: "Asia/Kolkata",
     },
     attendees: attendeesEmails.map((email) => ({ email })),
     reminders: {
@@ -118,11 +118,11 @@ export async function updateGoogleCalendarEvent(
     description: description,
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: "UTC",
+      timeZone: "Asia/Kolkata",
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: "UTC",
+      timeZone: "Asia/Kolkata",
     },
     attendees: attendeesEmails.map((email) => ({ email })),
   };
