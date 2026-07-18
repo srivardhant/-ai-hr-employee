@@ -693,8 +693,11 @@ export class WorkflowEngine {
       await updateStep("1", "RUNNING");
       await sleep(800);
 
-      const interviewType = jobTitle && (jobTitle.includes("tech") || jobTitle.includes("engineer") || jobTitle.includes("developer"))
-        ? "Technical Interview" : "HR Screening";
+      const isShortlistedWorkflow = input.toLowerCase().includes("shortlisted candidates");
+      const interviewType = isShortlistedWorkflow
+        ? "2nd Interview"
+        : (jobTitle && (jobTitle.includes("tech") || jobTitle.includes("engineer") || jobTitle.includes("developer"))
+          ? "Technical Interview" : "HR Screening");
       await updateStep("1", "COMPLETED", `Classified as: ${interviewType}`);
 
       await updateStep("2", "RUNNING");
@@ -702,15 +705,15 @@ export class WorkflowEngine {
 
       const candidates = await prisma.candidate.findMany({
         where: {
-          status: { in: ["APPLIED", "SCREENING", "SHORTLISTED"] },
+          status: isShortlistedWorkflow ? "EVALUATED" : { in: ["APPLIED", "SCREENING", "SHORTLISTED"] },
           ...(candidateName ? { name: { contains: candidateName } } : {}),
-          ...(jobTitle ? { jobOpening: { title: { contains: jobTitle } } } : {}),
+          ...(jobTitle && !isShortlistedWorkflow ? { jobOpening: { title: { contains: jobTitle } } } : {}),
         },
         include: { jobOpening: { select: { title: true } } },
       });
 
       if (candidates.length === 0) {
-        throw new Error("No eligible candidates found for interview scheduling");
+        throw new Error(isShortlistedWorkflow ? "No evaluated candidates found to schedule 2nd interview" : "No eligible candidates found for interview scheduling");
       }
       await updateStep("2", "COMPLETED", `Found ${candidates.length} candidate(s) for scheduling`);
 
