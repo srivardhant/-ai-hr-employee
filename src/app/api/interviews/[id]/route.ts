@@ -40,17 +40,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         );
 
         // Send updated email
-        await sendInterviewEmail({
-          candidateEmail: existingInterview.candidate.email,
-          candidateName: existingInterview.candidate.name,
-          interviewType: validated.type,
-          interviewDate: startDateTime.toLocaleDateString(),
-          interviewTime: startDateTime.toLocaleTimeString(),
-          interviewDuration: validated.duration,
-          interviewerName: validated.panelMembers || "AI HR Team",
-          googleMeetLink: existingInterview.googleMeetLink || "",
-          calendarLink: existingInterview.googleCalendarLink || "",
-        });
+        try {
+          await sendInterviewEmail({
+            candidateEmail: existingInterview.candidate.email,
+            candidateName: existingInterview.candidate.name,
+            interviewType: validated.type,
+            interviewDate: startDateTime.toLocaleDateString(),
+            interviewTime: startDateTime.toLocaleTimeString(),
+            interviewDuration: validated.duration,
+            interviewerName: validated.panelMembers || "AI HR Team",
+            googleMeetLink: existingInterview.googleMeetLink || "",
+            calendarLink: existingInterview.googleCalendarLink || "",
+          });
+        } catch (emailErr: any) {
+          console.error("Email sending failed but calendar sync succeeded:", emailErr);
+        }
 
         syncStatus = "SUCCESS";
         syncError = null;

@@ -83,17 +83,21 @@ export async function POST(request: Request) {
         syncStatus = "SUCCESS";
 
         // Send confirmation email to candidate
-        await sendInterviewEmail({
-          candidateEmail: candidate.email,
-          candidateName: candidate.name,
-          interviewType: validated.type,
-          interviewDate: startDateTime.toLocaleDateString(),
-          interviewTime: startDateTime.toLocaleTimeString(),
-          interviewDuration: validated.duration,
-          interviewerName: validated.panelMembers || "AI HR Team",
-          googleMeetLink: meetLink || "",
-          calendarLink: htmlLink || "",
-        });
+        try {
+          await sendInterviewEmail({
+            candidateEmail: candidate.email,
+            candidateName: candidate.name,
+            interviewType: validated.type,
+            interviewDate: startDateTime.toLocaleDateString(),
+            interviewTime: startDateTime.toLocaleTimeString(),
+            interviewDuration: validated.duration,
+            interviewerName: validated.panelMembers || "AI HR Team",
+            googleMeetLink: meetLink || "",
+            calendarLink: htmlLink || "",
+          });
+        } catch (emailErr: any) {
+          console.error("Email sending failed but calendar sync succeeded:", emailErr);
+        }
 
       } catch (e: any) {
         console.error("Google Integration Failed:", e);

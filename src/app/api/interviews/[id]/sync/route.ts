@@ -55,17 +55,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
 
       // Send email
-      await sendInterviewEmail({
-        candidateEmail: interview.candidate.email,
-        candidateName: interview.candidate.name,
-        interviewType: interview.type,
-        interviewDate: startDateTime.toLocaleDateString(),
-        interviewTime: startDateTime.toLocaleTimeString(),
-        interviewDuration: interview.duration,
-        interviewerName: interview.panelMembers || "AI HR Team",
-        googleMeetLink: meetLink || "",
-        calendarLink: htmlLink || "",
-      });
+      try {
+        await sendInterviewEmail({
+          candidateEmail: interview.candidate.email,
+          candidateName: interview.candidate.name,
+          interviewType: interview.type,
+          interviewDate: startDateTime.toLocaleDateString(),
+          interviewTime: startDateTime.toLocaleTimeString(),
+          interviewDuration: interview.duration,
+          interviewerName: interview.panelMembers || "AI HR Team",
+          googleMeetLink: meetLink || "",
+          calendarLink: htmlLink || "",
+        });
+      } catch (emailErr: any) {
+        console.error("Email sending failed but calendar sync succeeded:", emailErr);
+      }
 
       const updatedInterview = await prisma.interview.update({
         where: { id },
