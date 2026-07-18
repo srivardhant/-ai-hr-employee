@@ -1,5 +1,5 @@
 {
   "project": "ai-hr-employee",
-  "buildCommand": "npx prisma generate && npx prisma db push && next build",
+  "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install"
 }
