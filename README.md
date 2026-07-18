@@ -589,8 +589,6 @@ node prisma/seed-prod.mjs
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and log in with `srivardhan@aihr.com` / `srivardhan123`.
-
 ---
 
 ## Environment Variables
