@@ -247,6 +247,10 @@ Schedule, track and manage all candidate interviews — fully integrated with Go
 - Cultural Review
 - Final Director Review
 
+> [!IMPORTANT]
+> **Timezone Support & Google Calendar Sync:**
+> Timings are entered using your device's local timezone. The application automatically converts the selected local time into a standard UTC string using the browser's native API before sending it to the server. Google Calendar receives this UTC timestamp alongside your calendar's configured timezone (`Asia/Kolkata` / IST by default), guaranteeing that the scheduled event renders at the exact same local time across all attendees' calendars and local devices.
+
 **Calendar Sync Status:**
 - `Pending` — sync in progress
 - `Synced` — event in Google Calendar with Meet link ready
